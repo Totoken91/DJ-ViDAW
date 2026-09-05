@@ -43,7 +43,7 @@ export class Browser {
 
     this.el = h('div', { class: 'browser' },
       h('div', { class: 'bar thin' },
-        h('span', { class: 'wordart', style: { fontSize: '13px' } }, 'SAMPLES'),
+        h('span', { class: 'hint' }, 'IMPORTER'),
         h('div', { class: 'spacer' }),
         this.recBtn,
         h('button', { class: 'btn tiny', onclick: () => input.click() }, icon('folder'), 'FICHIER'),

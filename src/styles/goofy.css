@@ -301,17 +301,17 @@ body, .win {
   padding: 0 8px 0 2px; margin-right: 2px;
   border-right: 1px solid #14141a; box-shadow: 1px 0 0 rgba(255,255,255,.1);
 }
-.tb-logo-1 {
-  font: 900 26px/1 "Trebuchet MS", Impact, sans-serif;
-  color: #ff4fd8; text-shadow: 2px 2px 0 #000, 0 0 14px rgba(255,79,216,.9);
-  transform: rotate(-6deg);
+.logo-svg { display: block; filter: drop-shadow(0 2px 4px rgba(0,0,0,.55)); }
+.logo-disc { transform-origin: 20px 24px; animation: spin 5.5s linear infinite; }
+.logo-spark { transform-origin: 181px 14px; animation: twinkle 2.8s ease-in-out infinite; }
+@keyframes spin { to { transform: rotate(360deg) } }
+@keyframes twinkle {
+  0%, 100% { transform: scale(1) rotate(0deg); opacity: .95 }
+  50%      { transform: scale(1.35) rotate(25deg); opacity: 1 }
 }
-.tb-logo-2 {
-  font: 900 26px/1 "Trebuchet MS", Impact, sans-serif;
-  background: linear-gradient(180deg, #fff 0 30%, #4fe9ff 31% 60%, #0d7fb8 61% 100%);
-  -webkit-background-clip: text; background-clip: text; color: transparent;
-  filter: drop-shadow(2px 2px 0 #000);
-  letter-spacing: -1px;
+@media (prefers-reduced-motion: reduce) {
+  .logo-disc, .logo-spark, .vt-body, .boot-go { animation: none; }
+  .marquee span { animation-duration: 90s; }
 }
 #desktop {
   position: fixed;

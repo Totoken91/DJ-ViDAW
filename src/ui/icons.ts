@@ -190,3 +190,67 @@ export function viteauSVG(mood: VtMood = 'normal', size = 54): string {
     <rect x="36.4" y="21.5" width="6" height="9" rx="2.4" fill="${PINK}" stroke="${INK}" stroke-width="1.4"/>
   </svg>`
 }
+
+/* ============================================================
+   LE LOGO
+   Chrome a ligne d'horizon, cerne noir, ombre portee et un disque
+   qui tourne : la grammaire des logos de 2001, construite en SVG
+   plutot qu'empilee en ombres de texte.
+   ============================================================ */
+
+export function logoSVG(): string {
+  const face = `'Trebuchet MS', 'DejaVu Sans', Verdana, Impact, sans-serif`
+  // textLength fige la largeur des mots : la police de repli varie d'une
+  // machine a l'autre, le logo, lui, ne doit pas bouger.
+  const word = (x: number, y: number, size: number, len: number, txt: string, fill: string, stroke: string) => `
+    <text x="${x}" y="${y}" font-size="${size}" textLength="${len}" lengthAdjust="spacingAndGlyphs"
+          fill="#000" opacity=".42" transform="translate(2,2.5)">${txt}</text>
+    <text x="${x}" y="${y}" font-size="${size}" textLength="${len}" lengthAdjust="spacingAndGlyphs"
+          fill="${fill}" stroke="${stroke}" stroke-width="3" stroke-linejoin="round">${txt}</text>`
+
+  return `<svg class="logo-svg" width="192" height="48" viewBox="0 0 192 48" fill="none" aria-label="DJ ViDAW">
+  <defs>
+    <linearGradient id="lg-chrome" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0"    stop-color="#ffffff"/>
+      <stop offset=".26"  stop-color="#d3e3f7"/>
+      <stop offset=".47"  stop-color="#7995ba"/>
+      <stop offset=".505" stop-color="#1d3350"/>
+      <stop offset=".545" stop-color="#c2d9f0"/>
+      <stop offset=".78"  stop-color="#ffffff"/>
+      <stop offset="1"    stop-color="#8aa9cd"/>
+    </linearGradient>
+    <linearGradient id="lg-pink" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0"   stop-color="#ffd7ef"/>
+      <stop offset=".42" stop-color="#ff5cb0"/>
+      <stop offset=".52" stop-color="#c9147a"/>
+      <stop offset="1"   stop-color="#ff8fd0"/>
+    </linearGradient>
+    <radialGradient id="lg-disc" cx=".36" cy=".3" r=".85">
+      <stop offset="0"   stop-color="#f6f8fb"/>
+      <stop offset=".45" stop-color="#aeb6c4"/>
+      <stop offset="1"   stop-color="#5e6675"/>
+    </radialGradient>
+  </defs>
+
+  <g class="logo-disc">
+    <circle cx="20" cy="24" r="16" fill="url(#lg-disc)" stroke="#0d1220" stroke-width="1.6"/>
+    <path d="M20 8 a16 16 0 0 1 13.9 8.1 l-9.4 5.3 a5.4 5.4 0 0 0-4.5-2.6 Z" fill="#5fe6ff" opacity=".7"/>
+    <path d="M20 40 a16 16 0 0 1-13.9-8.1 l9.4-5.3 a5.4 5.4 0 0 0 4.5 2.6 Z" fill="#ff5cb0" opacity=".55"/>
+    <circle cx="20" cy="24" r="11.5" fill="none" stroke="rgba(0,0,0,.22)" stroke-width=".8"/>
+    <circle cx="20" cy="24" r="8" fill="none" stroke="rgba(0,0,0,.22)" stroke-width=".8"/>
+    <circle cx="20" cy="24" r="4.2" fill="#e9edf3" stroke="#0d1220" stroke-width="1.4"/>
+    <circle cx="20" cy="24" r="1.4" fill="#0d1220"/>
+  </g>
+
+  <g font-family="${face}" font-weight="900" paint-order="stroke fill">
+    <g transform="rotate(-5 56 24)">${word(42, 31, 27, 30, 'DJ', 'url(#lg-pink)', '#12070d')}</g>
+    ${word(76, 32, 30, 98, 'ViDAW', 'url(#lg-chrome)', '#0a1424')}
+  </g>
+
+  <text x="77" y="43" font-family="${face}" font-size="6" font-weight="700"
+        textLength="96" lengthAdjust="spacing" fill="#93abca">STATION AUDIONUMERIQUE</text>
+
+  <path class="logo-spark" d="M180 8 l1.5 4.6 4.6 1.5 -4.6 1.5 -1.5 4.6 -1.5-4.6 -4.6-1.5 4.6-1.5 Z"
+        fill="#fff8c9" stroke="#c9a227" stroke-width=".7" stroke-linejoin="round"/>
+</svg>`
+}

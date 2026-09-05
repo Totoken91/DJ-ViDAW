@@ -5,7 +5,7 @@
    ============================================================ */
 
 import { h, drag, clear } from './dom'
-import { icon } from './icons'
+import { icon, logoSVG } from './icons'
 import { knob } from './knob'
 import { Scope } from './scope'
 import type { Ctx } from './ctx'
@@ -73,10 +73,7 @@ export class Transport {
         h('span', { class: 'tb-cap' }, label))
 
     this.el = h('div', { id: 'topbar' },
-      h('div', { class: 'tb-logo' },
-        h('span', { class: 'tb-logo-1' }, 'DJ'),
-        h('span', { class: 'tb-logo-2' }, 'ViDAW'),
-      ),
+      h('div', { class: 'tb-logo', title: 'DJ ViDAW — station audionumerique', html: logoSVG() }),
       group('TRANSPORT', this.playBtn, this.songBtn, stopBtn, recBtn),
       group('TEMPO', this.bpmEl, this.posEl, swing),
       group('SORTIE', master, scopeBox),

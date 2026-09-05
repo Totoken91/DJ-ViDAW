@@ -49,22 +49,15 @@ html, body {
 #desktop {
   position: fixed; inset: 0;
   overflow: hidden;
-  background:
-    /* nuages */
-    radial-gradient(ellipse 20% 6% at 20% 20%, rgba(255,255,255,.95) 0%, rgba(255,255,255,.5) 40%, transparent 68%),
-    radial-gradient(ellipse 12% 4% at 27% 24%, rgba(255,255,255,.8) 0%, transparent 68%),
-    radial-gradient(ellipse 16% 5% at 77% 13%, rgba(255,255,255,.9) 0%, transparent 70%),
-    radial-gradient(ellipse 10% 3.5% at 69% 17%, rgba(255,255,255,.7) 0%, transparent 70%),
-    /* colline arriere, plus pale */
-    radial-gradient(ellipse 90% 34% at 18% 108%, #8ecb5a 0 78%, transparent 79%),
-    /* colline principale : son arc superieur dessine l'horizon */
-    radial-gradient(ellipse 155% 62% at 50% 141%, #74c13c 0 62%, #5aa82c 62% 74%, transparent 75%),
-    /* ombre douce dans le creux */
-    radial-gradient(ellipse 70% 22% at 82% 112%, rgba(30,90,20,.5) 0%, transparent 70%),
-    /* ciel */
-    linear-gradient(180deg, #0e4fa8 0%, #1c6cc9 26%, #3f93df 52%, #7cbdee 72%, #b9def6 86%, #d9eefa 100%);
-  background-color: #4e9e28;
+  background: #4e9e28;
 }
+/* Le paysage est peint dans un canevas (voir ui/wallpaper.ts) : une pile de
+   degrades CSS ne fait pas des nuages, elle fait des taches. */
+.wallpaper {
+  position: absolute; inset: 0; z-index: 0;
+  width: 100%; height: 100%; display: block;
+}
+.wallpaper-photo { background-size: cover; background-position: center; }
 
 /* Trame de tramage (dither) sur tout le bureau */
 #desktop::after {

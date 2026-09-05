@@ -55,8 +55,8 @@ export class Nightcore {
   private bar(): HTMLElement {
     return h('div', { class: 'nc-bar' },
       icon('moon', 18),
-      h('span', { class: 'nc-title' }, 'NIGHTCORIFICATION'),
-      h('span', { class: 'nc-note' }, 'accelere, ca monte — c\'est tout le secret'),
+      h('span', { class: 'nc-title' }, 'ACCELERE, CA MONTE'),
+      h('span', { class: 'nc-note' }, 'c\'est tout le secret du nightcore'),
       h('div', { class: 'spacer' }),
       h('button', { class: 'nc-btn', onclick: () => this.fileInput.click() }, icon('folder'), 'OUVRIR UN MORCEAU'),
     )

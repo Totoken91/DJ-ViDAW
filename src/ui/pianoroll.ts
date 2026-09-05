@@ -60,7 +60,6 @@ export class PianoRoll {
       return b
     }
     return h('div', { class: 'bar thin' },
-      h('span', { class: 'wordart', style: { fontSize: '13px' } }, 'PIANO ROLL'),
       this.titleEl,
       h('div', { class: 'sep' }),
       h('div', { style: { display: 'flex', gap: '3px' } }, mk('draw', 'wand', 'DESSIN'), mk('erase', 'broom', 'GOMME')),

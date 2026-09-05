@@ -20,6 +20,7 @@ import { Nightcore } from './ui/nightcore'
 import { Transport } from './ui/transport'
 import { Viteau } from './ui/viteau'
 import { boot, dialog, toast, Taskbar, Saver, desktopIcon, type MenuEntry } from './ui/shell'
+import { installWallpaper } from './ui/wallpaper'
 import type { Ctx } from './ui/ctx'
 
 import { Engine } from './audio/engine'
@@ -455,6 +456,8 @@ function buildUI() {
       h('div', { class: 'odometer' }, ...hits.split('').map((d) => h('u', {}, d)))),
     h('div', { class: 'wr-ring' }, '« precedent · webring DAW · suivant »'),
   ))
+
+  installWallpaper(desktop)
 
   app.append(transport.el, desktop, taskbar.el, taskbar.menu, viteau.el, saver.el)
 

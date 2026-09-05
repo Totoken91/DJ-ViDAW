@@ -37,8 +37,6 @@ export class Rack {
     )
 
     return h('div', { class: 'bar thin' },
-      h('span', { class: 'wordart', style: { fontSize: '13px' } }, 'CHANNEL RACK'),
-      h('div', { class: 'sep' }),
       addMenu,
       h('button', { class: 'btn tiny', onclick: () => this.randomize() }, icon('dice'), 'HASARD'),
       h('button', { class: 'btn tiny', onclick: () => this.clearPattern() }, icon('broom'), 'VIDER'),

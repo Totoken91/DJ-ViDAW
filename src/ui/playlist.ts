@@ -46,8 +46,6 @@ export class Playlist {
 
   private bar(): HTMLElement {
     return h('div', { class: 'bar thin' },
-      h('span', { class: 'wordart', style: { fontSize: '13px' } }, 'PLAYLIST'),
-      h('div', { class: 'sep' }),
       h('span', { class: 'hint' }, 'PINCEAU'),
       this.brushSel,
       h('button', { class: 'btn tiny', onclick: () => this.addPattern() }, icon('plus'), 'MOTIF'),

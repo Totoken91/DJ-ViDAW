@@ -83,6 +83,13 @@ tel dans l'interface plutôt que caché.
 ### L'interface
 
 Un faux Windows XP, reconstruit intégralement en CSS : **zéro image binaire**.
+Le fond d'écran lui-même est calculé — ciel dégradé, nuages en bruit
+fractionnaire éclairés par le haut, collines herbeuses texturées, brume
+d'horizon et grain argentique — rendu une fois au démarrage dans un canevas
+(`src/ui/wallpaper.ts`). Pour y mettre une vraie photo à la place :
+`installWallpaper(desktop, { photo: '…' })`, avec une URL ou une `data:` URI
+(le CSP des pages embarquées bloque les images externes, donc il faut
+l'embarquer).
 Le fond d'écran, les barres de titre Luna, le bouton démarrer, les potards, les
 vu-mètres et les curseurs sont des dégradés, des `radial-gradient` et des SVG
 en `data:` URI.
