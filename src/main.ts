@@ -7,7 +7,7 @@ import './styles/xp.css'
 import './styles/daw.css'
 import './styles/goofy.css'
 
-import { h } from './ui/dom'
+import { h, clear } from './ui/dom'
 import { Win } from './ui/win'
 import { Rack } from './ui/rack'
 import { PianoRoll } from './ui/pianoroll'
@@ -22,7 +22,8 @@ import type { Ctx } from './ui/ctx'
 
 import { Engine } from './audio/engine'
 import { Samples } from './audio/samples'
-import { renderProject, bufferToWav, encodeWav, downloadBlob } from './audio/render'
+import { renderProject, bufferToWav, bufferToWebm, canEncodeWebm } from './audio/render'
+import { saveFile, isEmbedded, type SaveResult } from './core/save'
 import { demoProject, type Project, clamp } from './core/state'
 
 /* ------------------------------------------------------------------ */
@@ -113,25 +114,30 @@ function adoptProject(p: Project) {
   dirty = false
 }
 
-/** Fichier .vidaw : le projet + tous les samples embarques en WAV base64. */
+/** Fichier de projet : le projet complet plus tous les samples embarques en
+    WAV base64. L'extension .vidaw n'est pas reconnue par les hotes qui
+    filtrent les telechargements ; le contenu etant du JSON, on le nomme
+    .json chez eux. */
 async function exportProjectFile() {
-  const payload = {
-    format: 'dj-vidaw/1',
-    project,
-    samples: samples.list().map((s) => ({
-      id: s.id, name: s.name,
-      wav: blobToB64Sync(bufferToWav(s.buffer)),
-    })),
-  }
-  // l'encodage base64 est asynchrone : on resout d'abord
-  const resolved = { ...payload, samples: await Promise.all(payload.samples.map(async (s) => ({ ...s, wav: await s.wav }))) }
-  const blob = new Blob([JSON.stringify(resolved)], { type: 'application/json' })
-  downloadBlob(blob, `${slug(project.name)}.vidaw`)
-  toast('Projet exporte (samples inclus).')
-  dirty = false
+  const list = samples.list()
+  const encoded = await Promise.all(list.map(async (s) => ({
+    id: s.id, name: s.name, wav: await blobToB64(bufferToWav(s.buffer)),
+  })))
+  const blob = new Blob(
+    [JSON.stringify({ format: 'dj-vidaw/1', project, samples: encoded })],
+    { type: 'application/json' })
+  const r = await saveFile(blob, `${slug(project.name)}.${isEmbedded() ? 'json' : 'vidaw'}`)
+  if (r.ok) { toast(`Projet exporte (${list.length} sample${list.length > 1 ? 's' : ''} inclus).`); dirty = false }
+  else reportSave(r)
 }
 
-function blobToB64Sync(b: Blob): Promise<string> {
+function reportSave(r: SaveResult) {
+  if (r.ok) return
+  if (r.reason === 'declined') toast(r.message)
+  else dialog({ title: 'Enregistrement impossible', icon: '⚠️', body: r.message })
+}
+
+function blobToB64(b: Blob): Promise<string> {
   return new Promise((res) => {
     const r = new FileReader()
     r.onload = () => res(String(r.result).split(',')[1] ?? '')
@@ -167,7 +173,30 @@ const slug = (s: string) => s.replace(/[^a-z0-9_-]+/gi, '_').replace(/^_+|_+$/g,
 /* Export audio                                                        */
 /* ------------------------------------------------------------------ */
 
+/** Sort un rendu dans le format que l'hote accepte : WAV en page autonome,
+    webm/Opus dans un viewer qui refuse le WAV. */
+async function offerAudio(
+  buf: AudioBuffer, base: string,
+  onStatus: (s: string) => void, onProgress?: (p: number) => void,
+) {
+  if (!isEmbedded()) {
+    const r = await saveFile(bufferToWav(buf), `${base}.wav`)
+    onStatus(r.ok ? 'Fichier WAV enregistre.' : r.message)
+    return
+  }
+  if (!canEncodeWebm()) {
+    onStatus('Cet hote n\'accepte pas le WAV, et ce navigateur ne sait pas encoder en webm. Utilise le lecteur ci-dessus.')
+    return
+  }
+  onStatus(`Encodage webm en temps reel — compte ${Math.ceil(buf.duration)} s.`)
+  const actx = await engine.init()
+  const blob = await bufferToWebm(actx, buf, onProgress)
+  const r = await saveFile(blob, `${base}.webm`)
+  onStatus(r.ok ? 'Fichier webm (Opus) enregistre.' : r.message)
+}
+
 function exportDialog() {
+  const embedded = isEmbedded()
   const modeSel = h('select', { class: 'sel' },
     h('option', { value: 'song' }, 'La chanson entiere (playlist)'),
     h('option', { value: 'pattern' }, 'Le motif courant seulement'),
@@ -177,6 +206,9 @@ function exportDialog() {
   const bar = h('i')
   const prog = h('div', { class: 'prog', style: { display: 'none', marginTop: '10px' } }, bar)
   const status = h('div', { style: { marginTop: '6px', fontSize: '10px', color: '#333' } })
+  const player = h('audio', { controls: 'controls', style: { width: '100%', marginTop: '10px', display: 'none' } })
+  const saveRow = h('div', { style: { display: 'flex', gap: '8px', marginTop: '8px' } })
+  let playerUrl = ''
 
   const body = h('div', {},
     h('div', { style: { marginBottom: '8px' } }, 'Qu\'est-ce qu\'on grave sur le CD-R ?'),
@@ -185,30 +217,27 @@ function exportDialog() {
       h('span', {}, 'Repetitions du motif'), repeats,
       h('span', {}, 'Queue (secondes)'), tail,
     ),
-    prog, status,
+    prog, player, saveRow, status,
   )
 
   dialog({
-    title: 'Exporter en WAV', icon: '💾', body,
-    buttons: [
-      {
-        label: 'Graver !', primary: true, onClick: () => { /* remplace ci-dessous */ },
-      },
-      { label: 'Annuler' },
-    ],
+    title: 'Exporter le morceau', icon: '💾', body,
+    buttons: [{ label: 'Graver !', primary: true }, { label: 'Fermer' }],
   })
 
-  // On remplace le bouton pour garder la boite ouverte pendant le rendu
-  const dlgBtns = document.querySelectorAll<HTMLElement>('#modal-layer .xp-btn')
-  const goBtn = dlgBtns[0]
+  // Le bouton est remplace pour garder la boite ouverte pendant le rendu.
+  const goBtn = document.querySelector<HTMLElement>('#modal-layer .xp-btn.primary')
   if (!goBtn) return
   const fresh = goBtn.cloneNode(true) as HTMLElement
   goBtn.replaceWith(fresh)
+
   fresh.addEventListener('click', async () => {
     fresh.setAttribute('disabled', 'true')
     fresh.textContent = 'Gravure...'
     prog.style.display = ''
+    bar.style.width = '0%'
     status.textContent = 'Rendu hors-ligne en cours...'
+    clear(saveRow)
     try {
       const buf = await renderProject(project, samples, {
         mode: modeSel.value as 'song' | 'pattern',
@@ -216,10 +245,31 @@ function exportDialog() {
         repeats: clamp(Number(repeats.value) || 4, 1, 64),
         onProgress: (p) => { bar.style.width = `${Math.round(p * 100)}%` },
       })
-      downloadBlob(bufferToWav(buf), `${slug(project.name)}_${project.bpm}bpm.wav`)
-      status.textContent = `Termine — ${buf.duration.toFixed(1)}s`
-      viteau.say('Exporte ! Envoie-le a un label. Ou pas.')
-      setTimeout(() => document.getElementById('modal-layer')?.classList.remove('on'), 900)
+
+      // Ecoute immediate : cela marche partout, y compris la ou l'hote
+      // bloque les telechargements.
+      if (playerUrl) URL.revokeObjectURL(playerUrl)
+      playerUrl = URL.createObjectURL(bufferToWav(buf))
+      player.src = playerUrl
+      player.style.display = ''
+      status.textContent = `Rendu termine — ${buf.duration.toFixed(1)} s. Ecoute-le, puis enregistre-le.`
+
+      const base = `${slug(project.name)}_${project.bpm}bpm`
+      const label = embedded
+        ? (canEncodeWebm() ? '💾 ENREGISTRER (.webm)' : '💾 ENREGISTRER')
+        : '💾 TELECHARGER LE WAV'
+      const saveBtn = h('button', { class: 'xp-btn primary save-audio' }, label)
+      saveBtn.addEventListener('click', async () => {
+        saveBtn.setAttribute('disabled', 'true')
+        await offerAudio(buf, base, (m) => { status.textContent = m },
+          (p) => { bar.style.width = `${Math.round(p * 100)}%` })
+        saveBtn.removeAttribute('disabled')
+      })
+      saveRow.appendChild(saveBtn)
+
+      viteau.say('Rendu fini ! Ecoute-le avant de l\'envoyer a un label.')
+      fresh.removeAttribute('disabled')
+      fresh.textContent = 'Regraver'
     } catch (e) {
       status.textContent = `Echec du rendu : ${String(e)}`
       fresh.removeAttribute('disabled')
@@ -230,13 +280,16 @@ function exportDialog() {
 
 /* Enregistrement en direct de la sortie master */
 function toggleLiveRec() {
+  const clearBtns = () => document.querySelectorAll('.btn.rec').forEach((b) => b.classList.remove('on'))
   if (engine.recording) {
     const r = engine.stopRec()
-    if (r) {
-      downloadBlob(encodeWav([r.l, r.r], r.rate), `${slug(project.name)}_live.wav`)
-      toast('Enregistrement live sauvegarde.')
-    } else toast('Rien n\'a ete capture.')
-    document.querySelectorAll('.btn.rec').forEach((b) => b.classList.remove('on'))
+    clearBtns()
+    if (!r) { toast('Rien n\'a ete capture.'); return }
+    const actx = engine.ctx!
+    const buf = actx.createBuffer(2, r.l.length, r.rate)
+    buf.copyToChannel(r.l, 0)
+    buf.copyToChannel(r.r, 1)
+    void offerAudio(buf, `${slug(project.name)}_live`, (m) => toast(m))
   } else {
     void engine.init().then(() => {
       if (engine.startRec()) {
@@ -288,7 +341,7 @@ function buildUI() {
   wins.get('channel')!.close()
 
   /* --- menu Demarrer --- */
-  const fileInput = h('input', { type: 'file', accept: '.vidaw,application/json', style: { display: 'none' } })
+  const fileInput = h('input', { type: 'file', accept: '.vidaw,.json,application/json', style: { display: 'none' } })
   fileInput.addEventListener('change', () => {
     const f = (fileInput as HTMLInputElement).files?.[0]
     if (f) void importProjectFile(f)
@@ -306,9 +359,9 @@ function buildUI() {
     { sep: true, icon: '', label: '' },
     { icon: '💾', label: 'Enregistrer', sub: 'dans le navigateur', onClick: saveLocal },
     { icon: '📂', label: 'Recharger', sub: 'la derniere sauvegarde', onClick: loadLocal },
-    { icon: '⬇️', label: 'Exporter le projet', sub: 'fichier .vidaw', onClick: () => void exportProjectFile() },
+    { icon: '⬇️', label: 'Exporter le projet', sub: 'avec les samples', onClick: () => void exportProjectFile() },
     { icon: '⬆️', label: 'Ouvrir un projet', sub: 'fichier .vidaw', onClick: () => fileInput.click() },
-    { icon: '🎵', label: 'Exporter en WAV', onClick: exportDialog },
+    { icon: '🎵', label: 'Exporter le morceau', sub: 'rendu audio', onClick: exportDialog },
 
     { icon: '🆕', label: 'Nouveau projet', right: true, onClick: () => {
       dialog({
@@ -464,7 +517,7 @@ function bindKeys() {
   document.addEventListener('drop', (e) => {
     const files = [...((e as DragEvent).dataTransfer?.files ?? [])]
     if (!files.length) return
-    const proj = files.find((f) => /\.vidaw$/i.test(f.name))
+    const proj = files.find((f) => /\.(vidaw|json)$/i.test(f.name))
     if (proj) { void importProjectFile(proj); return }
     wins.get('browser')!.restore()
     void browser.importFiles(files)

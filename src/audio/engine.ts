@@ -7,10 +7,10 @@
 import type { Project, Note } from '../core/state'
 import { STEPS_PER_BAR, patternSteps, songLengthSteps, clamp } from '../core/state'
 import { buildGraph, type Graph } from './graph'
-import { triggerNote, type SampleBank } from './voices'
+import { triggerNote, type SampleBank, type F32 } from './voices'
 import { loadWorklets } from './fx'
-import crusherUrl from '../worklets/crusher.js?url'
-import tapUrl from '../worklets/tap.js?url'
+import crusherSrc from '../worklets/crusher.js?raw'
+import tapSrc from '../worklets/tap.js?raw'
 
 export type PlayMode = 'pattern' | 'song'
 
@@ -29,7 +29,7 @@ export class Engine {
   private timer: number | null = null
   private startedAt = 0
   private tapNode: AudioWorkletNode | null = null
-  private recChunks: { l: Float32Array; r: Float32Array }[] = []
+  private recChunks: { l: F32; r: F32 }[] = []
   recording = false
   onStep: ((step: number) => void) | null = null
   onError: ((msg: string) => void) | null = null
@@ -51,7 +51,7 @@ export class Engine {
     const Ctor: typeof AudioContext =
       window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
     const ctx = new Ctor({ latencyHint: 'interactive' })
-    await loadWorklets(ctx, { crusher: crusherUrl, tap: tapUrl })
+    await loadWorklets(ctx, { crusher: crusherSrc, tap: tapSrc })
     this.ctx = ctx
     this.graph = buildGraph(ctx, this.project, true)
     // Tap d'enregistrement insere entre le master et la sortie
@@ -192,7 +192,7 @@ export class Engine {
     return true
   }
 
-  stopRec(): { l: Float32Array; r: Float32Array; rate: number } | null {
+  stopRec(): { l: F32; r: F32; rate: number } | null {
     if (!this.recording || !this.tapNode) return null
     this.recording = false
     this.tapNode.port.postMessage({ rec: false })

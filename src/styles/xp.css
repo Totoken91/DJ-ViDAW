@@ -30,6 +30,8 @@
 
 html, body {
   margin: 0; padding: 0; height: 100%;
+  /* la page est parfois composee sur le fond d'un hote : on peint le notre */
+  background: #06070a;
   overflow: hidden;
   font-family: Tahoma, "Segoe UI", Verdana, Geneva, sans-serif;
   font-size: 11px;

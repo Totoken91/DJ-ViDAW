@@ -25,8 +25,9 @@ npm run dev        # http://localhost:5173
 ```
 
 ```bash
-npm run build      # typecheck + bundle dans dist/
-npm run preview    # sert le bundle de production
+npm run build            # typecheck + bundle dans dist/
+npm run preview          # sert le bundle de production
+npm run build:artifact   # page unique auto-portante dans dist/artifact.html
 ```
 
 Aucune dépendance à l'exécution. Vite et TypeScript servent uniquement à la
@@ -95,9 +96,30 @@ en `data:` URI.
 - **Ctrl+S** enregistre dans le `localStorage` du navigateur (sans les samples).
 - **Exporter le projet** produit un `.vidaw` : du JSON contenant le projet **et**
   tous les samples encodés en WAV base64. Autonome, transportable.
-- Un `.vidaw` glissé sur la fenêtre est rechargé directement.
+- Un `.vidaw` (ou `.json`) glissé sur la fenêtre est rechargé directement.
 
 Rien ne quitte jamais ta machine : il n'y a aucun serveur.
+
+## Page unique et pages embarquées
+
+`npm run build:artifact` produit `dist/artifact.html` : un seul fichier, CSS et
+JS compris, sans aucune ressource externe. Les AudioWorklets sont chargés depuis
+une Blob URL construite à partir de leur source, donc il n'y a pas de chemin
+d'asset à résoudre — et si l'hôte interdit les Blob URL, le bitcrusher retombe
+sur un `WaveShaper`.
+
+Quand la page tourne dans un viewer qui intercepte les téléchargements
+(`window.claude` présent), l'export s'adapte :
+
+| | Page autonome | Page embarquée |
+|---|---|---|
+| Écoute du rendu | lecteur intégré | lecteur intégré |
+| Fichier audio | `.wav` par lien de téléchargement | `.webm` (Opus) via la capacité `downloads` de l'hôte |
+| Fichier de projet | `.vidaw` | `.json` (même contenu) |
+
+Le WAV n'est pas dans la liste d'extensions que ces hôtes acceptent, d'où
+l'encodage webm — fait en temps réel par `MediaRecorder`, avec une barre de
+progression.
 
 ---
 

@@ -10,7 +10,7 @@ import { STEPS_PER_BAR, patternSteps, songLengthSteps } from '../core/state'
 import { buildGraph } from './graph'
 import { triggerNote, type SampleBank } from './voices'
 import { loadWorklets } from './fx'
-import crusherUrl from '../worklets/crusher.js?url'
+import crusherSrc from '../worklets/crusher.js?raw'
 
 export interface RenderOpts {
   mode: 'pattern' | 'song'
@@ -35,7 +35,7 @@ export async function renderProject(p: Project, bank: SampleBank, o: RenderOpts)
     window.OfflineAudioContext ||
     (window as unknown as { webkitOfflineAudioContext: typeof OfflineAudioContext }).webkitOfflineAudioContext
   const ctx = new OfflineCtor(2, frames, rate)
-  await loadWorklets(ctx, { crusher: crusherUrl })
+  await loadWorklets(ctx, { crusher: crusherSrc })
 
   const graph = buildGraph(ctx, p, false)
   graph.postMaster.connect(ctx.destination)
@@ -118,13 +118,45 @@ export function bufferToWav(b: AudioBuffer): Blob {
   return encodeWav(chans, b.sampleRate)
 }
 
-export function downloadBlob(blob: Blob, name: string) {
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = name
-  document.body.appendChild(a)
-  a.click()
-  a.remove()
-  setTimeout(() => URL.revokeObjectURL(url), 4000)
+export const WEBM_MIME = 'audio/webm;codecs=opus'
+
+export function canEncodeWebm(): boolean {
+  return typeof MediaRecorder !== 'undefined' &&
+    typeof MediaRecorder.isTypeSupported === 'function' &&
+    MediaRecorder.isTypeSupported(WEBM_MIME)
+}
+
+/** Encodage en webm/Opus. MediaRecorder travaille en temps reel : la duree
+    de l'encodage est celle du morceau, d'ou la progression. */
+export function bufferToWebm(
+  ctx: AudioContext, buf: AudioBuffer, onProgress?: (p: number) => void,
+): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    let dest: MediaStreamAudioDestinationNode
+    try { dest = ctx.createMediaStreamDestination() }
+    catch (e) { reject(e); return }
+    const src = ctx.createBufferSource()
+    src.buffer = buf
+    src.connect(dest)                     // pas de connexion vers les enceintes
+
+    const rec = new MediaRecorder(dest.stream, { mimeType: WEBM_MIME, audioBitsPerSecond: 192000 })
+    const chunks: Blob[] = []
+    const t0 = ctx.currentTime
+    const timer = window.setInterval(() => {
+      onProgress?.(Math.min(1, (ctx.currentTime - t0) / buf.duration))
+    }, 120)
+    const finish = () => {
+      window.clearInterval(timer)
+      onProgress?.(1)
+      try { src.disconnect(); dest.disconnect() } catch { /* deja detache */ }
+    }
+
+    rec.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data) }
+    rec.onerror = (e) => { finish(); reject(e) }
+    rec.onstop = () => { finish(); resolve(new Blob(chunks, { type: 'audio/webm' })) }
+
+    src.onended = () => window.setTimeout(() => { if (rec.state !== 'inactive') rec.stop() }, 150)
+    rec.start()
+    src.start()
+  })
 }

@@ -17,15 +17,29 @@ export interface FxNode {
 
 const crusherLoaded = new WeakSet<BaseAudioContext>()
 
-export async function loadWorklets(ctx: BaseAudioContext, urls: { crusher: string; tap?: string }) {
+/* Les worklets sont charges depuis leur code source plutot que depuis un
+   fichier : une Blob URL fonctionne aussi bien dans un bundle multi-fichiers
+   que dans une page unique embarquee, sans chemin d'asset a resoudre. */
+const blobUrls = new Map<string, string>()
+function moduleUrl(src: string): string {
+  let u = blobUrls.get(src)
+  if (!u) {
+    u = URL.createObjectURL(new Blob([src], { type: 'text/javascript' }))
+    blobUrls.set(src, u)
+  }
+  return u
+}
+
+export async function loadWorklets(ctx: BaseAudioContext, src: { crusher: string; tap?: string }) {
   if (crusherLoaded.has(ctx)) return
   const anyCtx = ctx as unknown as { audioWorklet?: AudioWorklet }
   if (!anyCtx.audioWorklet) return
   try {
-    await anyCtx.audioWorklet.addModule(urls.crusher)
-    if (urls.tap) await anyCtx.audioWorklet.addModule(urls.tap)
+    await anyCtx.audioWorklet.addModule(moduleUrl(src.crusher))
+    if (src.tap) await anyCtx.audioWorklet.addModule(moduleUrl(src.tap))
     crusherLoaded.add(ctx)
   } catch (e) {
+    // Certaines integrations bloquent les Blob URL : on retombe sur le waveshaper.
     console.warn('[ViDAW] worklet indisponible, repli sur waveshaper', e)
   }
 }
