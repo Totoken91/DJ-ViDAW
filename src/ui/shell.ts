@@ -5,6 +5,7 @@
    ============================================================ */
 
 import { h, clear } from './dom'
+import { icon } from './icons'
 
 /* ---------------- Ecran de demarrage ---------------- */
 
@@ -35,7 +36,7 @@ export function boot(onStart: () => void): HTMLElement {
       const bar = el.querySelector<HTMLElement>('.boot-bar')
       if (bar) bar.style.display = 'none'
       log.appendChild(h('div', { style: { marginTop: '8px', color: '#8fd0ff' } },
-        'Le son ne peut demarrer qu\'apres un clic. Merci les navigateurs. 🙄'))
+        'Le son ne peut demarrer qu\'apres un clic. Merci les navigateurs.'))
     }
   }
   setTimeout(tick, 300)
@@ -62,12 +63,12 @@ export function dialog(o: {
   const btns = o.buttons ?? [{ label: 'OK', primary: true }]
   const dlg = h('div', { class: 'dialog' },
     h('div', { class: 'win-title' },
-      h('span', { class: 'win-title-text' }, `${o.icon ?? '💬'}  ${o.title}`),
+      h('span', { class: 'win-title-text' }, o.title),
       h('div', { class: 'win-btns' },
         h('button', { class: 'win-btn close', onclick: () => closeDialog() })),
     ),
     h('div', { class: 'dlg-body' },
-      h('div', { class: 'ic' }, o.icon ?? '💬'),
+      h('div', { class: 'ic' }, icon(o.icon ?? 'help', 32)),
       h('div', { style: { flex: '1 1 auto' } }, typeof o.body === 'string' ? document.createTextNode(o.body) : o.body),
     ),
     h('div', { class: 'dlg-foot' }, ...btns.map((b) =>
@@ -199,28 +200,28 @@ export class Taskbar {
         class: 'sm-item',
         onclick: () => { this.closeMenu(); e.onClick?.() },
       },
-        h('span', { class: 'ic' }, e.icon),
+        h('span', { class: 'ic' }, icon(e.icon, 20)),
         h('span', {}, h('b', {}, e.label), e.sub ? h('div', { style: { fontSize: '10px', opacity: '.7' } }, e.sub) : null),
       ))
     }
 
     this.menu = h('div', { id: 'start-menu' },
       h('div', { class: 'sm-head' },
-        h('div', { class: 'sm-avatar' }, '🕺'),
+        h('div', { class: 'sm-avatar' }, icon('disk', 30)),
         h('span', {}, user)),
       h('div', { class: 'sm-cols' }, left, right),
       h('div', { class: 'sm-foot' },
-        h('span', { onclick: () => { this.closeMenu(); location.reload() } }, '🔄 Redemarrer'),
-        h('span', { onclick: () => { this.closeMenu(); window.close() } }, '⏻ Arreter'),
+        h('span', { onclick: () => { this.closeMenu(); location.reload() } }, icon('loop', 15), 'Redemarrer'),
+        h('span', { onclick: () => { this.closeMenu(); window.close() } }, icon('power', 15), 'Arreter'),
       ),
     )
 
     this.el = h('div', { id: 'taskbar' },
       this.startBtn, this.btns,
       h('div', { id: 'tray' },
-        h('span', { class: 'tray-icon', title: 'Volume (decoratif)' }, '🔊'),
-        h('span', { class: 'tray-icon', title: 'Reseau : 56k' }, '📡'),
-        h('span', { class: 'tray-icon', title: 'Il fait beau' }, '☀️'),
+        h('span', { class: 'tray-icon', title: 'Volume' }, icon('speaker', 15)),
+        h('span', { class: 'tray-icon', title: 'Connexion : 56k' }, icon('net', 15)),
+        h('span', { class: 'tray-icon', title: 'Il fait beau' }, icon('sun', 15)),
         this.clock),
     )
 
@@ -245,8 +246,9 @@ export class Taskbar {
     this.menu.classList.remove('on')
     this.startBtn.classList.remove('on')
   }
-  addButton(label: string, onClick: () => void): HTMLElement {
-    const b = h('div', { class: 'task-btn', onclick: onClick }, label)
+  addButton(name: string, label: string, onClick: () => void): HTMLElement {
+    const b = h('div', { class: 'task-btn', onclick: onClick },
+      icon(name, 15), h('span', { class: 'tb-label' }, label))
     this.btns.appendChild(b)
     return b
   }
@@ -254,10 +256,10 @@ export class Taskbar {
 
 /* ---------------- Icones du bureau ---------------- */
 
-export function desktopIcon(icon: string, label: string, x: number, y: number, onOpen: () => void): HTMLElement {
+export function desktopIcon(name: string, label: string, x: number, y: number, onOpen: () => void): HTMLElement {
   let last = 0
   const el = h('div', { class: 'dicon', style: { left: `${x}px`, top: `${y}px` } },
-    h('div', { class: 'gl' }, icon),
+    h('div', { class: 'gl' }, icon(name, 34)),
     h('div', { class: 'lb' }, label))
   el.addEventListener('click', () => {
     const now = Date.now()

@@ -32,6 +32,9 @@ export class Engine {
   private recChunks: { l: F32; r: F32 }[] = []
   recording = false
   onStep: ((step: number) => void) | null = null
+  /** Appele a chaque changement lecture/arret : play() etant asynchrone,
+      les appelants ne peuvent pas repeindre juste apres l'avoir invoque. */
+  onState: (() => void) | null = null
   onError: ((msg: string) => void) | null = null
   private liveVoices = 0
 
@@ -87,6 +90,7 @@ export class Engine {
     this.sync()
     this.tick()
     this.timer = window.setInterval(() => this.tick(), LOOKAHEAD_MS)
+    this.onState?.()
   }
 
   stop() {
@@ -94,11 +98,13 @@ export class Engine {
     if (this.timer !== null) { clearInterval(this.timer); this.timer = null }
     this.step = 0
     this.onStep?.(-1)
+    this.onState?.()
   }
 
   pause() {
     this.playing = false
     if (this.timer !== null) { clearInterval(this.timer); this.timer = null }
+    this.onState?.()
   }
 
   toggle(mode?: PlayMode) {

@@ -96,29 +96,72 @@ body, .win {
 .blink { animation: blink 1s steps(2, start) infinite; }
 @keyframes blink { to { visibility: hidden } }
 
-/* ---------- Stickers de bureau ---------- */
-.sticker {
-  position: absolute; z-index: 2; pointer-events: none;
-  font: 900 11px/1.25 "Comic Sans MS", "Trebuchet MS", cursive;
-  color: #fff; padding: 6px 10px;
-  text-shadow: 2px 2px 0 rgba(0,0,0,.6);
-  border-radius: 4px;
-  animation: floaty 5.5s ease-in-out infinite;
+/* ---------- Le coin du webmaster ----------
+   Badges 88x31, compteur de visites et anneau de sites : ce qu'on collait
+   vraiment en bas d'une page en 2001, a la place de stickers flottants. */
+#webring {
+  position: absolute; left: 104px; bottom: 12px; z-index: 2;
+  width: 208px; padding: 7px;
+  background: #d9d5c8;
+  border: 2px outset #f2efe4;
+  box-shadow: 3px 3px 10px rgba(0,0,0,.45);
+  text-align: center;
 }
-@keyframes floaty { 0%,100% { transform: translateY(0) rotate(var(--rot,0deg)) } 50% { transform: translateY(-7px) rotate(var(--rot,0deg)) } }
+.wr-strip {
+  font: 700 8px/14px Tahoma, "DejaVu Sans", Verdana, sans-serif;
+  letter-spacing: 1.6px; color: #3a2f00;
+  background: repeating-linear-gradient(45deg, #ffd23d 0 8px, #1a1a1a 8px 16px);
+  border: 1px solid #6b5a00;
+  text-shadow: 0 0 3px #ffd23d, 0 0 3px #ffd23d, 0 0 3px #ffd23d;
+  margin-bottom: 6px;
+}
+.wr-badges { display: grid; grid-template-columns: 88px 88px; gap: 5px; justify-content: center; }
+.badge {
+  width: 88px; height: 31px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 1px;
+  border: 1px solid #000; cursor: default; overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.4);
+}
+.badge b { font: 700 8px/1 Tahoma, "DejaVu Sans", Verdana, sans-serif; letter-spacing: .6px; }
+.badge i { font: 400 9px/1 "Courier New", monospace; font-style: normal; letter-spacing: .4px; }
+.badge.b1 { background: linear-gradient(#2b4fa8, #0d1f4d); color: #cfe0ff; }
+.badge.b1 b { color: #ffd23d; }
+.badge.b2 { background: linear-gradient(#1a1a1a, #000); color: #00ff9c; }
+.badge.b3 { background: linear-gradient(#c2185b, #6a0d33); color: #ffd9ea; }
+.badge.b4 { background: linear-gradient(#e8e4d6, #b8b2a0); color: #2a2a2a; }
+.badge.b4 b { color: #a3122e; }
+
+.wr-counter {
+  margin-top: 6px; display: flex; align-items: center; justify-content: center; gap: 6px;
+  font: 700 8px/1 Tahoma, "DejaVu Sans", Verdana, sans-serif; color: #3a3a3a; letter-spacing: 1px;
+}
+.odometer { display: flex; gap: 1px; }
+.odometer u {
+  text-decoration: none;
+  width: 11px; height: 15px; display: grid; place-items: center;
+  font: 700 11px/1 "Courier New", monospace;
+  background: linear-gradient(#2a2a2a, #000 45%, #1a1a1a);
+  color: #ffb63d; border: 1px solid #000;
+  text-shadow: 0 0 5px rgba(255,182,61,.8);
+}
+.wr-ring {
+  margin-top: 5px;
+  font: 400 8px/1.4 Tahoma, "DejaVu Sans", Verdana, sans-serif; color: #4a4436;
+}
 
 /* ---------- Icones du bureau ---------- */
 .dicon {
-  position: absolute; width: 78px; z-index: 2;
+  position: absolute; width: 94px; z-index: 2;
   display: flex; flex-direction: column; align-items: center; gap: 3px;
   padding: 5px 2px; border-radius: 3px; cursor: pointer; text-align: center;
 }
 .dicon:hover { background: rgba(255,255,255,.16); }
-.dicon .gl { font-size: 34px; filter: drop-shadow(2px 3px 3px rgba(0,0,0,.6)); }
+.dicon .gl { line-height: 0; filter: drop-shadow(2px 3px 3px rgba(0,0,0,.6)); }
+.dicon.star .gl { filter: drop-shadow(0 0 8px rgba(255,92,176,.9)) drop-shadow(2px 3px 3px rgba(0,0,0,.6)); }
 .dicon .lb {
-  font: 400 11px/1.25 Tahoma, "DejaVu Sans", Verdana, sans-serif; color: #fff;
+  font: 400 10.5px/1.3 Tahoma, "DejaVu Sans", Verdana, sans-serif; color: #fff;
   text-shadow: 1px 1px 2px rgba(0,0,0,.95), 0 0 6px rgba(0,0,0,.7);
-  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 /* ---------- Assistant VITEAU ---------- */
@@ -147,7 +190,7 @@ body, .win {
 }
 .vt-close:hover { color: #000; }
 .vt-body {
-  font-size: 46px; pointer-events: auto; cursor: pointer;
+  line-height: 0; pointer-events: auto; cursor: pointer;
   filter: drop-shadow(2px 3px 4px rgba(0,0,0,.5));
   animation: bob 2.6s ease-in-out infinite;
 }
@@ -228,15 +271,36 @@ body, .win {
 
 /* ---------- Barre de transport ---------- */
 #topbar {
-  position: fixed; left: 0; right: 0; top: 0; height: 62px; z-index: 90000;
-  display: flex; align-items: center; gap: 6px; padding: 4px 8px;
+  position: fixed; left: 0; right: 0; top: 0; height: 74px; z-index: 90000;
+  display: flex; align-items: stretch; gap: 5px; padding: 4px 8px 3px;
   background: linear-gradient(180deg, #6a6a7a 0%, #4a4a58 40%, #35353f 60%, #2a2a33 100%);
   border-bottom: 2px solid #14141a;
   box-shadow: inset 0 1px 0 rgba(255,255,255,.28), 0 3px 12px rgba(0,0,0,.55);
   overflow-x: auto; overflow-y: hidden;
 }
-#topbar::-webkit-scrollbar { height: 6px; }
-.tb-logo { display: flex; align-items: baseline; gap: 2px; flex: 0 0 auto; padding-right: 4px; }
+#topbar::-webkit-scrollbar { height: 5px; }
+#topbar > .marquee { align-self: center; }
+#topbar > .btn { align-self: center; }
+/* Chaque groupe est un petit panneau grave, comme sur une facade d'appareil :
+   c'est ce qui donne une hierarchie a une rangee de commandes. */
+.tb-group {
+  display: flex; flex-direction: column; justify-content: space-between;
+  flex: 0 0 auto; padding: 3px 7px 1px;
+  border: 1px solid #14141a; border-radius: 4px;
+  background: linear-gradient(180deg, #3e3e49, #2e2e37);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.12), inset 0 -8px 12px rgba(0,0,0,.22);
+}
+.tb-row { display: flex; align-items: center; gap: 5px; flex: 1 1 auto; }
+.tb-cap {
+  font: 700 7px/1.5 Tahoma, "DejaVu Sans", Verdana, sans-serif;
+  letter-spacing: 1.4px; color: #8a90a0; text-align: center;
+  text-transform: uppercase;
+}
+.tb-logo {
+  display: flex; align-items: center; gap: 2px; flex: 0 0 auto;
+  padding: 0 8px 0 2px; margin-right: 2px;
+  border-right: 1px solid #14141a; box-shadow: 1px 0 0 rgba(255,255,255,.1);
+}
 .tb-logo-1 {
   font: 900 26px/1 "Trebuchet MS", Impact, sans-serif;
   color: #ff4fd8; text-shadow: 2px 2px 0 #000, 0 0 14px rgba(255,79,216,.9);
@@ -251,5 +315,5 @@ body, .win {
 }
 #desktop {
   position: fixed;
-  inset: 62px 0 var(--taskbar-h) 0;
+  inset: 74px 0 var(--taskbar-h) 0;
 }

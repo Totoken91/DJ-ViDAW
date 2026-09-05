@@ -5,6 +5,7 @@
    ============================================================ */
 
 import { h, drag, clear } from './dom'
+import { icon } from './icons'
 import { knob } from './knob'
 import { Scope } from './scope'
 import type { Ctx } from './ctx'
@@ -22,10 +23,10 @@ export class Transport {
   constructor(private ctx: Ctx, onExport: () => void, onRec: () => void) {
     const c = ctx
 
-    this.playBtn = h('button', { class: 'btn go', onclick: () => this.togglePlay('pattern'), title: 'F5' }, '▶ MOTIF')
-    this.songBtn = h('button', { class: 'btn', onclick: () => this.togglePlay('song'), title: 'F6' }, '▶▶ CHANSON')
-    const stopBtn = h('button', { class: 'btn', onclick: () => { c.engine.stop(); this.paint() }, title: 'Stop' }, '⏹')
-    const recBtn = h('button', { class: 'btn rec', onclick: onRec, title: 'Enregistre la sortie en direct' }, '⏺ REC')
+    this.playBtn = h('button', { class: 'btn go', onclick: () => this.togglePlay('pattern'), title: 'F5' }, icon('play'), 'MOTIF')
+    this.songBtn = h('button', { class: 'btn', onclick: () => this.togglePlay('song'), title: 'F6' }, icon('song'), 'CHANSON')
+    const stopBtn = h('button', { class: 'btn', onclick: () => c.engine.stop(), title: 'Stop' }, icon('stop'))
+    const recBtn = h('button', { class: 'btn rec', onclick: onRec, title: 'Enregistre la sortie en direct' }, icon('rec'), 'REC')
 
     this.bpmEl = h('div', { class: 'lcd', title: 'Glisse pour changer le tempo' },
       h('span', { id: 'bpm-val' }, String(c.project.bpm)), h('small', {}, 'BPM'))
@@ -50,41 +51,41 @@ export class Transport {
     } })
 
     const swing = knob({
-      min: 0, max: 0.5, value: c.project.swing, def: 0.08, label: 'SWING', size: 34,
+      min: 0, max: 0.5, value: c.project.swing, def: 0.08, label: 'SWING', size: 30,
       color: '#ff4fd8', format: (v) => `${Math.round(v * 200)}%`,
       onInput: (v) => { c.project.swing = v; c.markDirty() },
     })
     const master = knob({
-      min: 0, max: 1.2, value: c.project.masterVol, def: 0.8, label: 'MASTER', size: 38,
+      min: 0, max: 1.2, value: c.project.masterVol, def: 0.8, label: 'MASTER', size: 32,
       color: '#ffd23d', format: (v) => `${Math.round(v * 100)}`,
       onInput: (v) => { c.project.masterVol = v; c.sync(); c.markDirty() },
     })
 
     const scopeBox = h('div', {
-      style: { width: '150px', height: '46px', flex: '0 0 150px', border: '1px solid #0a0a0e', borderRadius: '3px', overflow: 'hidden' },
+      style: { width: '128px', height: '38px', flex: '0 0 128px', border: '1px solid #0a0a0e', borderRadius: '2px', overflow: 'hidden' },
     }, this.scope.el)
     this.scope.el.style.width = '100%'
     this.scope.el.style.height = '100%'
+
+    const group = (label: string, ...kids: (Node | null)[]) =>
+      h('div', { class: 'tb-group' },
+        h('div', { class: 'tb-row' }, ...kids),
+        h('span', { class: 'tb-cap' }, label))
 
     this.el = h('div', { id: 'topbar' },
       h('div', { class: 'tb-logo' },
         h('span', { class: 'tb-logo-1' }, 'DJ'),
         h('span', { class: 'tb-logo-2' }, 'ViDAW'),
       ),
-      h('div', { class: 'sep' }),
-      this.playBtn, this.songBtn, stopBtn, recBtn,
-      h('div', { class: 'sep' }),
-      this.bpmEl, this.posEl,
-      swing, master,
-      h('div', { class: 'sep' }),
-      h('span', { class: 'hint' }, 'MOTIF'), this.patSel,
-      h('div', { class: 'sep' }),
-      scopeBox,
+      group('TRANSPORT', this.playBtn, this.songBtn, stopBtn, recBtn),
+      group('TEMPO', this.bpmEl, this.posEl, swing),
+      group('SORTIE', master, scopeBox),
+      group('MOTIF COURANT', this.patSel),
       h('div', { class: 'marquee' }, h('span', {},
         '★ DJ ViDAW v1.0 ★ le studio qui tient dans un onglet ★ concu par DJ Viteau dans un garage a Aulnay ★ ' +
         'compatible Pentium III ★ ne pas ecouter a plus de 11 sur 10 ★ appuyez sur ESPACE pour lancer le son ★ ' +
         'meilleur vu en 1024x768 ★ signez mon livre d\'or ★')),
-      h('button', { class: 'btn hot', onclick: onExport, title: 'Rendu WAV' }, '💾 EXPORTER'),
+      h('button', { class: 'btn hot', onclick: onExport, title: 'Rendu audio' }, icon('floppy'), 'EXPORTER'),
     )
 
     this.refreshPatterns()
@@ -103,7 +104,6 @@ export class Transport {
     const e = this.ctx.engine
     if (e.playing && e.mode === mode) e.stop()
     else { e.stop(); void e.play(mode) }
-    setTimeout(() => this.paint(), 30)
   }
 
   paint() {
@@ -113,8 +113,11 @@ export class Transport {
     if (bpmSpan) bpmSpan.textContent = String(c.project.bpm)
     this.playBtn.classList.toggle('on', e.playing && e.mode === 'pattern')
     this.songBtn.classList.toggle('on', e.playing && e.mode === 'song')
-    this.playBtn.textContent = e.playing && e.mode === 'pattern' ? '⏸ MOTIF' : '▶ MOTIF'
-    this.songBtn.textContent = e.playing && e.mode === 'song' ? '⏸ CHANSON' : '▶▶ CHANSON'
+    const relabel = (el: HTMLElement, on: boolean, name: string, text: string) => {
+      clear(el); el.append(icon(on ? 'pause' : name), document.createTextNode(text))
+    }
+    relabel(this.playBtn, e.playing && e.mode === 'pattern', 'play', 'MOTIF')
+    relabel(this.songBtn, e.playing && e.mode === 'song', 'song', 'CHANSON')
   }
 
   setPosition(step: number) {

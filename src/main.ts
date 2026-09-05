@@ -6,6 +6,7 @@
 import './styles/xp.css'
 import './styles/daw.css'
 import './styles/goofy.css'
+import './styles/nightcore.css'
 
 import { h, clear } from './ui/dom'
 import { Win } from './ui/win'
@@ -15,6 +16,7 @@ import { Playlist } from './ui/playlist'
 import { Mixer } from './ui/mixer'
 import { ChannelEditor } from './ui/channel'
 import { Browser } from './ui/browser'
+import { Nightcore } from './ui/nightcore'
 import { Transport } from './ui/transport'
 import { Viteau } from './ui/viteau'
 import { boot, dialog, toast, Taskbar, Saver, desktopIcon, type MenuEntry } from './ui/shell'
@@ -41,7 +43,7 @@ const desktop = h('div', { id: 'desktop' })
 const viteau = new Viteau()
 const saver = new Saver()
 
-let rack: Rack, roll: PianoRoll, playlist: Playlist, mixer: Mixer, chEditor: ChannelEditor, browser: Browser, transport: Transport
+let rack: Rack, roll: PianoRoll, playlist: Playlist, mixer: Mixer, chEditor: ChannelEditor, browser: Browser, transport: Transport, nightcore: Nightcore
 const wins = new Map<string, Win>()
 let dirty = false
 
@@ -72,6 +74,7 @@ const ctx: Ctx = {
   toast,
   say: (m) => viteau.say(m),
   dialog,
+  offerRender: (buf, base, title) => audioResultDialog(buf, base, title),
   markDirty() { dirty = true },
 }
 
@@ -134,7 +137,7 @@ async function exportProjectFile() {
 function reportSave(r: SaveResult) {
   if (r.ok) return
   if (r.reason === 'declined') toast(r.message)
-  else dialog({ title: 'Enregistrement impossible', icon: '⚠️', body: r.message })
+  else dialog({ title: 'Enregistrement impossible', icon: 'help', body: r.message })
 }
 
 function blobToB64(b: Blob): Promise<string> {
@@ -163,7 +166,7 @@ async function importProjectFile(file: File) {
     adoptProject(p)
     toast(`"${p.name}" charge avec ${data.samples?.length ?? 0} sample(s).`)
   } catch {
-    dialog({ title: 'Erreur de lecture', icon: '❌', body: 'Ce fichier ne ressemble pas a un projet DJ ViDAW.' })
+    dialog({ title: 'Erreur de lecture', icon: 'close', body: 'Ce fichier ne ressemble pas a un projet DJ ViDAW.' })
   }
 }
 
@@ -195,6 +198,32 @@ async function offerAudio(
   onStatus(r.ok ? 'Fichier webm (Opus) enregistre.' : r.message)
 }
 
+/** Boite commune a l'export du projet et a la Nightcorification :
+    on ecoute d'abord, on enregistre ensuite. */
+function audioResultDialog(buf: AudioBuffer, base: string, title = 'Rendu termine') {
+  const url = URL.createObjectURL(bufferToWav(buf))
+  const player = h('audio', { controls: 'controls', style: { width: '100%', marginTop: '4px' } })
+  player.src = url
+  const bar = h('i')
+  const prog = h('div', { class: 'prog', style: { display: 'none', marginTop: '8px' } }, bar)
+  const status = h('div', { style: { marginTop: '6px', fontSize: '10px' } },
+    `${buf.duration.toFixed(1)} s — ecoute, puis enregistre si ca te va.`)
+  const saveBtn = h('button', { class: 'xp-btn primary save-audio' },
+    isEmbedded() ? (canEncodeWebm() ? 'Enregistrer (.webm)' : 'Enregistrer') : 'Telecharger le WAV')
+  saveBtn.addEventListener('click', async () => {
+    saveBtn.setAttribute('disabled', 'true')
+    prog.style.display = ''
+    await offerAudio(buf, base, (m) => { status.textContent = m },
+      (p) => { bar.style.width = `${Math.round(p * 100)}%` })
+    saveBtn.removeAttribute('disabled')
+  })
+  dialog({
+    title, icon: 'floppy',
+    body: h('div', {}, player, prog, h('div', { style: { marginTop: '8px' } }, saveBtn), status),
+    buttons: [{ label: 'Fermer', onClick: () => setTimeout(() => URL.revokeObjectURL(url), 2000) }],
+  })
+}
+
 function exportDialog() {
   const embedded = isEmbedded()
   const modeSel = h('select', { class: 'sel' },
@@ -221,7 +250,7 @@ function exportDialog() {
   )
 
   dialog({
-    title: 'Exporter le morceau', icon: '💾', body,
+    title: 'Exporter le morceau', icon: 'floppy', body,
     buttons: [{ label: 'Graver !', primary: true }, { label: 'Fermer' }],
   })
 
@@ -256,8 +285,8 @@ function exportDialog() {
 
       const base = `${slug(project.name)}_${project.bpm}bpm`
       const label = embedded
-        ? (canEncodeWebm() ? '💾 ENREGISTRER (.webm)' : '💾 ENREGISTRER')
-        : '💾 TELECHARGER LE WAV'
+        ? (canEncodeWebm() ? 'ENREGISTRER (.webm)' : 'ENREGISTRER')
+        : 'TELECHARGER LE WAV'
       const saveBtn = h('button', { class: 'xp-btn primary save-audio' }, label)
       saveBtn.addEventListener('click', async () => {
         saveBtn.setAttribute('disabled', 'true')
@@ -312,6 +341,7 @@ function buildUI() {
   mixer = new Mixer(ctx)
   chEditor = new ChannelEditor(ctx)
   browser = new Browser(ctx)
+  nightcore = new Nightcore(ctx)
   transport = new Transport(ctx, exportDialog, toggleLiveRec)
 
   const W = window.innerWidth, H = window.innerHeight - 100
@@ -328,17 +358,15 @@ function buildUI() {
     return win
   }
 
-  mk('rack', 'Channel Rack', '🥁', rack.el, 12, 10, 660, 320)
-  mk('roll', 'Piano roll', '🎹', roll.el, 300, 200, 720, 400, () => roll.resize())
-  mk('playlist', 'Playlist', '📊', playlist.el, 60, 350, 780, 300, () => playlist.resize())
-  mk('mixer', 'Mixeur', '🎚', mixer.el, 690, 10, 620, 560)
-  mk('channel', 'Reglages du channel', '🔧', chEditor.el, 120, 90, 620, 470)
-  mk('browser', 'Navigateur de samples', '📁', browser.el, 30, 60, 380, 420)
+  mk('rack', 'Channel Rack', 'rack', rack.el, 106, 8, 660, 320)
+  mk('roll', 'Piano roll', 'piano', roll.el, 330, 210, 720, 400, () => roll.resize())
+  mk('playlist', 'Playlist', 'playlist', playlist.el, 150, 344, 780, 292, () => playlist.resize())
+  mk('mixer', 'Mixeur', 'mixer', mixer.el, 786, 8, 620, 560)
+  mk('channel', 'Reglages du channel', 'wrench', chEditor.el, 200, 88, 620, 470)
+  mk('browser', 'Navigateur de samples', 'folder', browser.el, 120, 60, 380, 420)
+  mk('nightcore', 'Nightcorification', 'moon', nightcore.el, 190, 34, 880, 630, () => nightcore.refresh())
 
-  wins.get('roll')!.close()
-  wins.get('mixer')!.close()
-  wins.get('browser')!.close()
-  wins.get('channel')!.close()
+  for (const id of ['roll', 'mixer', 'browser', 'channel', 'nightcore']) wins.get(id)!.close()
 
   /* --- menu Demarrer --- */
   const fileInput = h('input', { type: 'file', accept: '.vidaw,.json,application/json', style: { display: 'none' } })
@@ -350,22 +378,24 @@ function buildUI() {
   document.body.appendChild(fileInput)
 
   const entries: MenuEntry[] = [
-    { icon: '🥁', label: 'Channel Rack', sub: 'le sequenceur', onClick: () => wins.get('rack')!.restore() },
-    { icon: '🎹', label: 'Piano roll', sub: 'les notes', onClick: () => wins.get('roll')!.restore() },
-    { icon: '📊', label: 'Playlist', sub: 'arranger le morceau', onClick: () => wins.get('playlist')!.restore() },
-    { icon: '🎚', label: 'Mixeur & effets', onClick: () => wins.get('mixer')!.restore() },
-    { icon: '🔧', label: 'Reglages du channel', onClick: () => wins.get('channel')!.restore() },
-    { icon: '📁', label: 'Navigateur de samples', onClick: () => wins.get('browser')!.restore() },
+    { icon: 'moon', label: 'Nightcorification', sub: 'accelerer un morceau', onClick: () => wins.get('nightcore')!.restore() },
     { sep: true, icon: '', label: '' },
-    { icon: '💾', label: 'Enregistrer', sub: 'dans le navigateur', onClick: saveLocal },
-    { icon: '📂', label: 'Recharger', sub: 'la derniere sauvegarde', onClick: loadLocal },
-    { icon: '⬇️', label: 'Exporter le projet', sub: 'avec les samples', onClick: () => void exportProjectFile() },
-    { icon: '⬆️', label: 'Ouvrir un projet', sub: 'fichier .vidaw', onClick: () => fileInput.click() },
-    { icon: '🎵', label: 'Exporter le morceau', sub: 'rendu audio', onClick: exportDialog },
+    { icon: 'rack', label: 'Channel Rack', sub: 'le sequenceur', onClick: () => wins.get('rack')!.restore() },
+    { icon: 'piano', label: 'Piano roll', sub: 'les notes', onClick: () => wins.get('roll')!.restore() },
+    { icon: 'playlist', label: 'Playlist', sub: 'arranger le morceau', onClick: () => wins.get('playlist')!.restore() },
+    { icon: 'mixer', label: 'Mixeur & effets', onClick: () => wins.get('mixer')!.restore() },
+    { icon: 'wrench', label: 'Reglages du channel', onClick: () => wins.get('channel')!.restore() },
+    { icon: 'folder', label: 'Navigateur de samples', onClick: () => wins.get('browser')!.restore() },
+    { sep: true, icon: '', label: '' },
+    { icon: 'floppy', label: 'Enregistrer', sub: 'dans le navigateur', onClick: saveLocal },
+    { icon: 'up', label: 'Recharger', sub: 'la derniere sauvegarde', onClick: loadLocal },
+    { icon: 'down', label: 'Exporter le projet', sub: 'avec les samples', onClick: () => void exportProjectFile() },
+    { icon: 'doc', label: 'Ouvrir un projet', sub: 'fichier .vidaw', onClick: () => fileInput.click() },
+    { icon: 'note', label: 'Exporter le morceau', sub: 'rendu audio', onClick: exportDialog },
 
-    { icon: '🆕', label: 'Nouveau projet', right: true, onClick: () => {
+    { icon: 'newdoc', label: 'Nouveau projet', right: true, onClick: () => {
       dialog({
-        title: 'Nouveau projet', icon: '🆕',
+        title: 'Nouveau projet', icon: 'newdoc',
         body: 'On efface tout et on recommence ? Le projet actuel sera perdu s\'il n\'est pas enregistre.',
         buttons: [
           { label: 'Oui, tout casser', primary: true, onClick: () => { adoptProject(demoProject()); toast('Nouveau projet.') } },
@@ -373,53 +403,58 @@ function buildUI() {
         ],
       })
     } },
-    { icon: '🎲', label: 'Beat aleatoire', right: true, onClick: () => {
-      rack.randomize()
-    } },
-    { icon: '🕺', label: 'Viteau', sub: 'l\'assistant', right: true, onClick: () => {
+    { icon: 'dice', label: 'Beat aleatoire', right: true, onClick: () => rack.randomize() },
+    { icon: 'star', label: 'Viteau', sub: 'l\'assistant', right: true, onClick: () => {
       const on = viteau.toggle()
       toast(on ? 'Viteau active.' : 'Viteau baillonne.')
     } },
-    { icon: '💤', label: 'Economiseur d\'ecran', right: true, onClick: () => saver.start() },
-    { icon: '⌨️', label: 'Raccourcis clavier', right: true, onClick: showHelp },
-    { icon: '❓', label: 'A propos', right: true, onClick: showAbout },
+    { icon: 'sleep', label: 'Economiseur d\'ecran', right: true, onClick: () => saver.start() },
+    { icon: 'keyboard', label: 'Raccourcis clavier', right: true, onClick: showHelp },
+    { icon: 'help', label: 'A propos', right: true, onClick: showAbout },
   ]
 
   const taskbar = new Taskbar(entries, 'DJ Viteau')
-  for (const [id, win] of wins) {
-    win.taskBtn = taskbar.addButton(`${win.opts.icon} ${win.opts.title}`, () => win.toggle())
+  for (const win of wins.values()) {
+    win.taskBtn = taskbar.addButton(win.opts.icon, win.opts.title, () => win.toggle())
     win.opts.onClose = () => { /* le bouton reste, il rouvre la fenetre */ }
-    void id
   }
 
   /* --- icones du bureau --- */
-  const icons: [string, string, string][] = [
-    ['💿', 'Poste de travail', 'rack'],
-    ['🎹', 'Piano roll', 'roll'],
-    ['📁', 'Mes Samples', 'browser'],
-    ['🎚', 'Mixeur', 'mixer'],
+  const shortcuts: [string, string, string][] = [
+    ['moon', 'Nightcorification', 'nightcore'],
+    ['rack', 'Poste de travail', 'rack'],
+    ['piano', 'Piano roll', 'roll'],
+    ['folder', 'Mes Samples', 'browser'],
+    ['mixer', 'Mixeur', 'mixer'],
   ]
-  icons.forEach(([ic, lb, target], i) => {
-    desktop.appendChild(desktopIcon(ic, lb, 14, 12 + i * 84, () => wins.get(target)!.restore()))
+  shortcuts.forEach(([ic, lb, target], i) => {
+    const el = desktopIcon(ic, lb, 14, 10 + i * 82, () => wins.get(target)!.restore())
+    if (target === 'nightcore') el.classList.add('star')
+    desktop.appendChild(el)
   })
-  desktop.appendChild(desktopIcon('🗑️', 'Corbeille', 14, 12 + icons.length * 84, () => {
-    dialog({ title: 'Corbeille', icon: '🗑️', body: 'La corbeille contient 0 element. Et 3 maquettes de 2003.' })
+  desktop.appendChild(desktopIcon('trash', 'Corbeille', 14, 10 + shortcuts.length * 82, () => {
+    dialog({ title: 'Corbeille', icon: 'trash', body: 'La corbeille contient 0 element. Et trois maquettes de 2003.' })
   }))
 
-  /* --- stickers --- */
-  const stickers: [string, number, number, string, string][] = [
-    ['★ NOUVEAU ! ★\n100% SANS PLUGIN', 78, 16, '#ff2e88', '-8deg'],
-    ['⚡ TESTÉ SUR\nPENTIUM III ⚡', 76, 62, '#0d8fd0', '5deg'],
-    ['♪ BEST VIEWED IN\n1024 x 768 ♪', 6, 88, '#7a2ecc', '2deg'],
-  ]
-  for (const [txt, x, y, col, rot] of stickers) {
-    const el = h('div', {
-      class: 'sticker',
-      style: { left: `${x}%`, top: `${y}%`, background: col, '--rot': rot },
-    })
-    el.innerText = txt
-    desktop.appendChild(el)
-  }
+  /* --- le coin du webmaster : badges 88x31 et compteur de visites,
+         soit exactement ce qu'on collait en bas d'une page en 2001 --- */
+  const badge = (top: string, bot: string, cls: string) =>
+    h('a', { class: `badge ${cls}`, title: `${top} ${bot}` },
+      h('b', {}, top), h('i', {}, bot))
+  const hits = String(137 + Math.floor(Math.random() * 60)).padStart(6, '0')
+  desktop.appendChild(h('div', { id: 'webring' },
+    h('div', { class: 'wr-strip' }, 'SITE EN CONSTRUCTION'),
+    h('div', { class: 'wr-badges' },
+      badge('MADE ON', 'A PC', 'b1'),
+      badge('BEST WITH', '1024x768', 'b2'),
+      badge('NO PLUGIN', 'REQUIRED', 'b3'),
+      badge('POWERED BY', 'DJ VITEAU', 'b4'),
+    ),
+    h('div', { class: 'wr-counter' },
+      h('span', {}, 'VISITEURS'),
+      h('div', { class: 'odometer' }, ...hits.split('').map((d) => h('u', {}, d)))),
+    h('div', { class: 'wr-ring' }, '« precedent · webring DAW · suivant »'),
+  ))
 
   app.append(transport.el, desktop, taskbar.el, taskbar.menu, viteau.el, saver.el)
 
@@ -448,7 +483,7 @@ function showHelp() {
     ['Alt + clic (forme d\'onde)', 'Poser une tranche'],
   ]
   dialog({
-    title: 'Raccourcis clavier', icon: '⌨️',
+    title: 'Raccourcis clavier', icon: 'keyboard',
     body: h('table', { style: { borderCollapse: 'collapse', width: '100%' } },
       ...rows.map(([k, v]) => h('tr', {},
         h('td', { style: { padding: '3px 10px 3px 0', fontWeight: '700', whiteSpace: 'nowrap' } }, k),
@@ -458,7 +493,7 @@ function showHelp() {
 
 function showAbout() {
   dialog({
-    title: 'A propos de DJ ViDAW', icon: '💿',
+    title: 'A propos de DJ ViDAW', icon: 'disk',
     body: h('div', {},
       h('div', { class: 'wordart', style: { fontSize: '26px', marginBottom: '8px' } }, 'DJ ViDAW 1.0'),
       h('p', { style: { margin: '0 0 8px' } }, 'Station de travail audionumerique concue par ', h('b', {}, 'DJ Viteau'), '.'),
@@ -487,14 +522,12 @@ function bindKeys() {
       e.preventDefault()
       if (engine.playing && engine.mode === 'pattern') engine.stop()
       else { engine.stop(); void engine.play('pattern'); viteau.playQuip() }
-      transport.paint()
     } else if (k === 'F6') {
       e.preventDefault()
       if (engine.playing && engine.mode === 'song') engine.stop()
       else { engine.stop(); void engine.play('song') }
-      transport.paint()
     } else if (k === 'Escape') {
-      engine.stop(); transport.paint()
+      engine.stop()
     } else if ((e.ctrlKey || e.metaKey) && k.toLowerCase() === 's') {
       e.preventDefault(); saveLocal()
     } else if ((e.ctrlKey || e.metaKey) && k.toLowerCase() === 'r') {
@@ -519,6 +552,25 @@ function bindKeys() {
     if (!files.length) return
     const proj = files.find((f) => /\.(vidaw|json)$/i.test(f.name))
     if (proj) { void importProjectFile(proj); return }
+    // Un seul morceau depose : il y a deux destinations plausibles, on demande.
+    if (files.length === 1) {
+      dialog({
+        title: 'On en fait quoi ?', icon: 'moon',
+        body: h('div', {}, h('b', {}, files[0].name), h('div', { style: { marginTop: '6px' } },
+          'Le decouper dans le sequenceur, ou l\'accelerer en nightcore ?')),
+        buttons: [
+          { label: 'Nightcorifier', primary: true, onClick: () => {
+            wins.get('nightcore')!.restore()
+            void nightcore.load(files[0])
+          } },
+          { label: 'Importer comme sample', onClick: () => {
+            wins.get('browser')!.restore()
+            void browser.importFiles(files)
+          } },
+        ],
+      })
+      return
+    }
     wins.get('browser')!.restore()
     void browser.importFiles(files)
   })
@@ -555,7 +607,7 @@ const bootEl = boot(async () => {
   } catch {
     toast('Le moteur audio a refuse de demarrer. Reclique quelque part.')
   }
-  setTimeout(() => viteau.say('Bienvenue dans DJ ViDAW ! Appuie sur ESPACE, ca fait du bruit. 🔊'), 900)
+  setTimeout(() => viteau.say('Bienvenue dans DJ ViDAW ! Appuie sur ESPACE, ca fait du bruit.'), 900)
 })
 
 /** Le petit jingle de demarrage, synthetise evidemment. */
@@ -600,13 +652,14 @@ engine.onStep = (s) => {
   playlist.setPlayhead(engine.mode === 'song' ? s : -1)
   transport.setPosition(Math.max(0, s))
 }
+engine.onState = () => transport.paint()
 engine.onError = (m) => toast(m)
 
 // Rechargement automatique de la derniere session, si elle existe
 if (localStorage.getItem(SAVE_KEY)) {
   setTimeout(() => {
     dialog({
-      title: 'Session precedente', icon: '📂',
+      title: 'Session precedente', icon: 'folder',
       body: 'Un projet enregistre a ete retrouve dans ce navigateur. On le recharge ?',
       buttons: [
         { label: 'Recharger', primary: true, onClick: loadLocal },

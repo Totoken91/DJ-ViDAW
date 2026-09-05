@@ -5,6 +5,7 @@
    ============================================================ */
 
 import { h } from './dom'
+import { icon } from './icons'
 import type { Ctx } from './ctx'
 import type { Note } from '../core/state'
 import { uid, patternSteps, keyName, isBlack, clamp } from '../core/state'
@@ -50,25 +51,25 @@ export class PianoRoll {
   }
 
   private bar(): HTMLElement {
-    const mk = (m: Mode, label: string) => {
+    const mk = (m: Mode, ic: string, label: string) => {
       const b = h('button', { class: `btn tiny${this.mode === m ? ' on' : ''}`, onclick: () => {
         this.mode = m
         ;[...b.parentElement!.querySelectorAll('.btn')].forEach((x) => x.classList.remove('on'))
         b.classList.add('on')
-      } }, label)
+      } }, icon(ic), label)
       return b
     }
     return h('div', { class: 'bar thin' },
       h('span', { class: 'wordart', style: { fontSize: '13px' } }, 'PIANO ROLL'),
       this.titleEl,
       h('div', { class: 'sep' }),
-      h('div', { style: { display: 'flex', gap: '3px' } }, mk('draw', '✏️ DESSIN'), mk('erase', '🧽 GOMME')),
+      h('div', { style: { display: 'flex', gap: '3px' } }, mk('draw', 'wand', 'DESSIN'), mk('erase', 'broom', 'GOMME')),
       h('div', { class: 'sep' }),
       h('button', { class: 'btn tiny', onclick: () => this.quantize() }, '⌗ QUANTISER'),
       h('button', { class: 'btn tiny', onclick: () => this.transpose(12) }, '▲ OCT'),
       h('button', { class: 'btn tiny', onclick: () => this.transpose(-12) }, '▼ OCT'),
-      h('button', { class: 'btn tiny', onclick: () => this.clearCh() }, '🧹 VIDER'),
-      h('button', { class: 'btn tiny', onclick: () => this.arp() }, '✨ ARP MAGIQUE'),
+      h('button', { class: 'btn tiny', onclick: () => this.clearCh() }, icon('broom'), 'VIDER'),
+      h('button', { class: 'btn tiny', onclick: () => this.arp() }, icon('wand'), 'ARP MAGIQUE'),
       h('div', { class: 'spacer' }),
       h('span', { class: 'hint' }, 'clic=note · glisser bord droit=longueur · molette=defiler · ctrl+molette=zoom'),
     )

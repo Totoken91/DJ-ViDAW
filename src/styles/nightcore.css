@@ -1,0 +1,156 @@
+/* ============================================================
+   DJ ViDAW — HABILLAGE DU MODE NIGHTCORIFICATION
+   Ce module a sa propre identite : indigo profond, rose et cyan.
+   Il doit se distinguer au premier coup d'oeil des fenetres grises
+   du sequenceur — c'est un applet, pas un panneau de plus.
+   ============================================================ */
+
+.nc {
+  --nc-ink: #0d0a1d;
+  --nc-panel: #1b1436;
+  --nc-panel-2: #2a1f4d;
+  --nc-line: #402f6e;
+  --nc-pink: #ff5cb0;
+  --nc-cyan: #5fe6ff;
+  --nc-text: #e8dcff;
+  --nc-dim: #9a8cc4;
+  display: flex; flex-direction: column; height: 100%;
+  color: var(--nc-text);
+  background:
+    radial-gradient(120% 80% at 82% -10%, rgba(255,92,176,.20) 0%, transparent 58%),
+    radial-gradient(90% 70% at 8% 110%, rgba(95,230,255,.16) 0%, transparent 60%),
+    linear-gradient(#1b1436, #120d26 62%, #0d0a1d);
+  position: relative;
+  overflow: hidden;
+}
+/* champ d'etoiles : deux couches de points, pas une image */
+.nc::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none; opacity: .5;
+  background-image:
+    radial-gradient(1px 1px at 12% 18%, #fff 100%, transparent),
+    radial-gradient(1px 1px at 62% 12%, #cfe9ff 100%, transparent),
+    radial-gradient(1px 1px at 84% 34%, #fff 100%, transparent),
+    radial-gradient(1px 1px at 28% 62%, #ffd9f0 100%, transparent),
+    radial-gradient(1px 1px at 46% 84%, #fff 100%, transparent),
+    radial-gradient(1px 1px at 92% 72%, #cfe9ff 100%, transparent),
+    radial-gradient(1px 1px at 7% 88%, #fff 100%, transparent),
+    radial-gradient(1px 1px at 71% 54%, #ffd9f0 100%, transparent);
+}
+.nc > * { position: relative; z-index: 1; }
+
+.nc-bar {
+  display: flex; align-items: center; gap: 6px; flex: 0 0 auto;
+  padding: 5px 8px;
+  background: linear-gradient(180deg, #3a2a68, #241a45);
+  border-bottom: 1px solid var(--nc-line);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.14);
+  flex-wrap: wrap;
+}
+.nc-title {
+  font: 900 15px/1 "Trebuchet MS", Impact, sans-serif;
+  letter-spacing: -.3px;
+  background: linear-gradient(180deg, #fff 0 42%, var(--nc-pink) 43% 72%, #b0227a 73% 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(1px 2px 0 #2a0d1e);
+  white-space: nowrap;
+}
+.nc-scroll { flex: 1 1 auto; overflow: auto; padding: 10px; }
+
+.nc-drop {
+  margin: 24px auto; max-width: 460px; padding: 30px 22px; text-align: center;
+  border: 2px dashed var(--nc-pink); border-radius: 10px;
+  background: rgba(255,92,176,.07);
+  cursor: pointer;
+}
+.nc-drop.hover { background: rgba(95,230,255,.12); border-color: var(--nc-cyan); }
+.nc-drop b { font: 900 15px/1.5 "Trebuchet MS", sans-serif; letter-spacing: .5px; display: block; }
+.nc-drop span { font: 400 11px/1.7 Tahoma, "DejaVu Sans", Verdana, sans-serif; color: var(--nc-dim); }
+
+.nc-wave {
+  position: relative; height: 140px; margin-bottom: 8px;
+  border: 1px solid var(--nc-line); border-radius: 5px; overflow: hidden;
+  background: #100b22; cursor: crosshair; touch-action: none;
+}
+.nc-wave canvas { display: block; width: 100%; height: 100%; }
+
+.nc-readout {
+  display: flex; gap: 0; flex-wrap: wrap; margin-bottom: 8px;
+  border: 1px solid var(--nc-line); border-radius: 5px; overflow: hidden;
+  background: #100b22;
+}
+.nc-cell {
+  flex: 1 1 108px; padding: 6px 10px;
+  border-right: 1px solid var(--nc-line);
+}
+.nc-cell:last-child { border-right: none; }
+.nc-cell u {
+  display: block; text-decoration: none;
+  font: 700 8px/1.6 Tahoma, "DejaVu Sans", Verdana, sans-serif;
+  letter-spacing: 1.2px; color: var(--nc-dim); text-transform: uppercase;
+}
+.nc-cell b {
+  font: 700 15px/1.2 "Courier New", monospace; color: var(--nc-cyan);
+  text-shadow: 0 0 8px rgba(95,230,255,.5);
+  font-variant-numeric: tabular-nums;
+}
+.nc-cell.hot b { color: var(--nc-pink); text-shadow: 0 0 8px rgba(255,92,176,.55); }
+
+.nc-presets { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+.nc-preset {
+  padding: 5px 10px; cursor: pointer; text-align: left;
+  border: 1px solid var(--nc-line); border-radius: 4px;
+  background: linear-gradient(180deg, #35275f, #241a45);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.13);
+  color: var(--nc-text);
+}
+.nc-preset:hover { border-color: var(--nc-pink); filter: brightness(1.2); }
+.nc-preset.on {
+  background: linear-gradient(180deg, var(--nc-pink), #a81f6e);
+  border-color: #ffb3da; color: #fff;
+}
+.nc-preset b { display: block; font: 700 10px/1.3 Tahoma, "DejaVu Sans", Verdana, sans-serif; letter-spacing: .4px; }
+.nc-preset i { font: 400 9px/1.3 Tahoma, "DejaVu Sans", Verdana, sans-serif; opacity: .72; font-style: normal; }
+
+.nc-main { display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; margin-bottom: 10px; }
+.nc-bigknob {
+  flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 10px 16px;
+  border: 1px solid var(--nc-line); border-radius: 8px;
+  background: radial-gradient(70% 70% at 50% 22%, #35275f, #1a1235);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.14);
+}
+.nc-bigknob .cap { font: 900 11px/1 Tahoma, "DejaVu Sans", Verdana, sans-serif; letter-spacing: 3px; color: var(--nc-pink); }
+.nc-modes { display: flex; gap: 3px; }
+
+/* Dans une colonne flex, flex-basis porte sur la hauteur : ces panneaux
+   doivent rester a la taille de leur contenu. */
+.nc-group {
+  flex: 0 0 auto; min-width: 260px;
+  border: 1px solid var(--nc-line); border-radius: 8px;
+  background: rgba(42,31,77,.5);
+}
+.nc-group > h4 {
+  margin: 0; padding: 4px 10px;
+  font: 700 9px/1.6 Tahoma, "DejaVu Sans", Verdana, sans-serif;
+  letter-spacing: 1.6px; text-transform: uppercase; color: var(--nc-dim);
+  border-bottom: 1px solid var(--nc-line);
+}
+.nc-knobs { display: flex; flex-wrap: wrap; gap: 8px; padding: 8px 10px 12px; }
+.nc .knob-label { color: #b8a8e0; }
+.nc .knob-val { color: var(--nc-cyan); }
+
+.nc-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.nc-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 13px; cursor: pointer;
+  font: 700 10px/1 Tahoma, "DejaVu Sans", Verdana, sans-serif; letter-spacing: .5px;
+  color: #fff; border-radius: 5px;
+  border: 1px solid #120c26;
+  background: linear-gradient(180deg, #4a3780, #2c2054);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.2), 0 1px 3px rgba(0,0,0,.5);
+}
+.nc-btn:hover { filter: brightness(1.22); }
+.nc-btn:active, .nc-btn.on { box-shadow: inset 1px 1px 5px rgba(0,0,0,.7); filter: brightness(.9); }
+.nc-btn.go { background: linear-gradient(180deg, #ff7cc2, #d02a86); }
+.nc-btn.cy { background: linear-gradient(180deg, #74ebff, #1591b5); color: #04222b; }
+.nc-note { font: 400 9px/1.5 Tahoma, "DejaVu Sans", Verdana, sans-serif; color: var(--nc-dim); }

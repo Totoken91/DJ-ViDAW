@@ -5,6 +5,7 @@
    ============================================================ */
 
 import { h, clear, drag } from './dom'
+import { icon } from './icons'
 import { knob } from './knob'
 import type { Ctx } from './ctx'
 import type { Channel, OscShape } from '../core/state'
@@ -65,7 +66,7 @@ export class ChannelEditor {
       h('div', { class: 'sep' }),
       h('span', { class: 'hint' }, 'SORTIE'), routing,
       h('div', { class: 'spacer' }),
-      h('button', { class: 'btn tiny go', onclick: () => void c.engine.preview(ch.id, 60, 4, 1) }, '▶ TESTER'),
+      h('button', { class: 'btn tiny go', onclick: () => void c.engine.preview(ch.id, 60, 4, 1) }, icon('play'), 'TESTER'),
     )
   }
 
@@ -266,7 +267,7 @@ export class ChannelEditor {
         h('span', { class: 'hint' }, 'SAMPLE'), pick,
         meta ? h('span', { class: 'pill' }, `${meta.duration.toFixed(2)}s · ${meta.rate}Hz · ${meta.channels}ch`) : null,
         h('div', { class: 'spacer' }),
-        h('button', { class: 'btn tiny', onclick: () => c.openWindow('browser') }, '📁 IMPORTER'),
+        h('button', { class: 'btn tiny', onclick: () => c.openWindow('browser') }, icon('folder'), 'IMPORTER'),
       ),
       wrap,
       h('div', { class: 'bar thin', style: { borderRadius: '3px', marginBottom: '6px' } },
@@ -281,11 +282,11 @@ export class ChannelEditor {
             c.markDirty(); this.paintWave(ch); this.render()
             c.toast(`${sp.slices.length} transitoires detectes`)
           },
-        }, '🔪 AUTO'),
+        }, icon('scissors'), 'AUTO'),
         h('button', { class: 'btn tiny', onclick: () => { sp.slices = []; c.markDirty(); this.paintWave(ch); this.render() } }, '✕ RESET'),
         h('div', { class: 'sep' }),
         h('button', { class: 'btn tiny go', onclick: spread }, '⇉ ETALER SUR LE MOTIF'),
-        h('button', { class: 'btn tiny', onclick: shuffleSlices }, '🎲 MELANGER'),
+        h('button', { class: 'btn tiny', onclick: shuffleSlices }, icon('dice'), 'MELANGER'),
         h('span', { class: 'pill' }, `${sp.slices.length + (sp.sampleId ? 1 : 0)} tranches`),
       ),
       h('div', { class: 'fxunit' },
@@ -299,13 +300,13 @@ export class ChannelEditor {
           h('div', { style: { display: 'flex', flexDirection: 'column', gap: '5px', paddingTop: '4px' } },
             h('label', { class: 'check' },
               h('input', { type: 'checkbox', checked: sp.reverse, onchange: (e: Event) => { sp.reverse = (e.target as HTMLInputElement).checked; c.markDirty(); this.paintWave(ch) } }),
-              '⏪ INVERSE'),
+              'INVERSE (lecture a l\'envers)'),
             h('label', { class: 'check' },
               h('input', { type: 'checkbox', checked: sp.loop, onchange: (e: Event) => { sp.loop = (e.target as HTMLInputElement).checked; c.markDirty() } }),
-              '🔁 BOUCLE'),
+              'BOUCLE'),
             h('label', { class: 'check' },
               h('input', { type: 'checkbox', checked: sp.stretch, onchange: (e: Event) => { sp.stretch = (e.target as HTMLInputElement).checked; c.markDirty() } }),
-              '⏱ CALER AU TEMPO'),
+              'CALER AU TEMPO'),
             h('div', { style: { display: 'flex', gap: '4px', alignItems: 'center' } },
               h('span', { class: 'knob-label' }, 'BPM SRC'),
               h('input', {
@@ -342,7 +343,7 @@ export class ChannelEditor {
     if (!meta) {
       g.fillStyle = '#4d5b6b'; g.font = 'bold 12px Tahoma, sans-serif'
       g.textAlign = 'center'
-      g.fillText('AUCUN SAMPLE — importe un fichier dans le navigateur 📁', w / 2, hh / 2)
+      g.fillText('AUCUN SAMPLE — importe un fichier dans le navigateur', w / 2, hh / 2)
       g.textAlign = 'left'
       return
     }
@@ -395,7 +396,7 @@ export class ChannelEditor {
 
     if (sp.reverse) {
       g.fillStyle = 'rgba(255,79,216,.85)'; g.font = 'bold 11px Tahoma, sans-serif'
-      g.fillText('⏪ INVERSE', 8, 18)
+      g.fillText('◀ INVERSE', 8, 18)
     }
   }
 }

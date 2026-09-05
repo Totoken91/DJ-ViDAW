@@ -54,6 +54,32 @@ Le point clé de l'architecture : le graphe audio et les voix sont écrits contr
 lecture temps réel et au bounce hors-ligne — pas de second moteur à maintenir,
 pas de divergence entre l'écoute et le fichier exporté.
 
+### Le mode Nightcorification
+
+Un applet complet, dans sa propre fenêtre, accessible depuis le bureau. On y
+dépose un morceau et on le transforme.
+
+Le nightcore, techniquement, c'est une bande magnétique qu'on accélère : la
+hauteur monte **avec** la vitesse. Le « slowed + reverb » est exactement le même
+effet dans l'autre sens. Le mode **RUBAN** reproduit ça exactement — un simple
+`playbackRate`, donc aucune dégradation. Le mode **LIBRE** découple vitesse et
+hauteur par recouvrement de grains fenêtrés ; c'est utile quand on veut
+accélérer sans effet chipmunk, mais ça grésille un peu, et c'est annoncé comme
+tel dans l'interface plutôt que caché.
+
+- **Huit presets** : nightcore (1.30x), nightcore doux, hyper, ralenti + reverb,
+  vaporwave, 8D, chipmunk, et « rapide, voix intacte » (mode libre).
+- **Chaîne dédiée** : pleurage de bande (deux LFO désaccordés sur un retard
+  court), coupe-bas, plateaux grave et aigu, saturation, élargisseur mi/latéral,
+  panoramique automatique « 8D », réverbe à convolution, limiteur.
+- **Lecture en direct** avec forme d'onde, tête de lecture, et boucle qu'on
+  trace à la souris.
+- **Affichage** de la vitesse, de la hauteur en demi-tons, de la durée
+  d'origine → durée finale, et du tempo estimé avant/après.
+- **Sorties** : export audio par rendu hors-ligne (même chaîne, donc identique à
+  l'écoute), ou envoi direct comme channel sampler pour le découper dans le
+  séquenceur.
+
 ### L'interface
 
 Un faux Windows XP, reconstruit intégralement en CSS : **zéro image binaire**.
@@ -61,11 +87,25 @@ Le fond d'écran, les barres de titre Luna, le bouton démarrer, les potards, le
 vu-mètres et les curseurs sont des dégradés, des `radial-gradient` et des SVG
 en `data:` URI.
 
+Les icônes sont dessinées à la main sur une grille de 16 (`src/ui/icons.ts`),
+en aplats cernés : c'est la grammaire des icônes de 2001, et les emoji — qui
+n'existaient pas encore — cassaient l'illusion plus sûrement que n'importe quel
+autre détail. Viteau, l'assistant, est dessiné lui aussi : une tête de CD sous
+un casque, avec six expressions.
+
+Le vert néon ne signifie qu'une chose : **actif**. L'ambre est la couleur des
+afficheurs, le rose celle des actions qui sortent du logiciel, le rouge
+l'enregistrement. Une couleur qui veut tout dire ne dit rien.
+
+En bas du bureau, des badges 88×31, un compteur de visites à roulettes et un
+anneau de sites — ce qu'on collait vraiment en bas d'une page en 2001.
+
 - **Channel Rack** — séquenceur pas à pas, vélocité au clic droit ou à la molette
 - **Piano roll** — dessin, déplacement, redimensionnement, gomme, bandeau de vélocité, quantisation, arpégiateur
 - **Playlist** — arrangement des motifs sur 10 pistes, avec aperçu des notes dans les clips
 - **Mixeur** — tranches, rack d'effets, vu-mètres
 - **Réglages du channel** — s'adapte au type : percussion, sampler avec forme d'onde, ou synthé
+- **Nightcorification** — l'applet décrit plus haut, avec sa propre identité
 - **Navigateur de samples** — import, micro, et générateurs de bruits idiots
 - **Fenêtres** déplaçables, redimensionnables, minimisables, avec barre des tâches
 - **Viteau**, l'assistant, qui commente pendant que tu travailles
@@ -88,6 +128,9 @@ en `data:` URI.
 | Double-clic sur un potard | Valeur par défaut |
 | `Ctrl`+molette | Zoom (piano roll, playlist) |
 | `Alt`+clic sur la forme d'onde | Poser une tranche |
+
+Dans la Nightcorification : clic sur la forme d'onde pour se placer, glisser
+pour tracer une boucle, clic droit pour l'enlever.
 
 ---
 
@@ -130,6 +173,7 @@ src/
 ├─ core/state.ts        modèle de projet, presets, définitions des effets
 ├─ audio/
 │  ├─ voices.ts         synthèse des percussions, sampler, synthé
+│  ├─ nightcore.ts      chaîne nightcore, étirement temporel, rendu
 │  ├─ fx.ts             les 9 effets, en fabriques reconstructibles
 │  ├─ graph.ts          câblage channels → inserts → master
 │  ├─ engine.ts         transport et scheduler
@@ -137,7 +181,10 @@ src/
 │  └─ samples.ts        décodage, pics d'affichage, détection de transitoires
 ├─ worklets/            bitcrusher et tap d'enregistrement (JS pur)
 ├─ ui/                  fenêtres, séquenceur, piano roll, playlist, mixeur…
+│  ├─ icons.ts          le jeu d'icônes et la mascotte, en SVG
+│  └─ nightcore.ts      l'applet Nightcorification
 └─ styles/              xp.css (Luna) · daw.css (FL) · goofy.css (Y2K)
+                        nightcore.css (l'applet)
 ```
 
 ---

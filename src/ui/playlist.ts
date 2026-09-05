@@ -5,6 +5,7 @@
    ============================================================ */
 
 import { h } from './dom'
+import { icon } from './icons'
 import type { Ctx } from './ctx'
 import type { Clip } from '../core/state'
 import { uid, patternSteps, clamp, STEPS_PER_BAR } from '../core/state'
@@ -49,11 +50,11 @@ export class Playlist {
       h('div', { class: 'sep' }),
       h('span', { class: 'hint' }, 'PINCEAU'),
       this.brushSel,
-      h('button', { class: 'btn tiny', onclick: () => this.addPattern() }, '➕ MOTIF'),
+      h('button', { class: 'btn tiny', onclick: () => this.addPattern() }, icon('plus'), 'MOTIF'),
       h('button', { class: 'btn tiny', onclick: () => this.clonePattern() }, '⧉ CLONER'),
       h('div', { class: 'sep' }),
-      h('button', { class: 'btn tiny', onclick: () => { this.ctx.project.clips = []; this.ctx.markDirty(); this.draw() } }, '🧹 VIDER'),
-      h('button', { class: 'btn tiny', onclick: () => this.autoArrange() }, '🪄 ARRANGER AUTO'),
+      h('button', { class: 'btn tiny', onclick: () => { this.ctx.project.clips = []; this.ctx.markDirty(); this.draw() } }, icon('broom'), 'VIDER'),
+      h('button', { class: 'btn tiny', onclick: () => this.autoArrange() }, icon('wand'), 'ARRANGER AUTO'),
       h('div', { class: 'spacer' }),
       h('span', { class: 'hint' }, 'clic=poser · droit=effacer · glisser=deplacer · ctrl+molette=zoom · maj+molette=pistes'),
     )

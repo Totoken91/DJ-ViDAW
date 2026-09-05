@@ -5,6 +5,7 @@
    ============================================================ */
 
 import { h, clear } from './dom'
+import { icon } from './icons'
 import type { Ctx } from './ctx'
 import type { Channel, Note, DrumKind } from '../core/state'
 import { uid, patternSteps, makeChannel, clamp, DRUM_KINDS } from '../core/state'
@@ -39,8 +40,8 @@ export class Rack {
       h('span', { class: 'wordart', style: { fontSize: '13px' } }, 'CHANNEL RACK'),
       h('div', { class: 'sep' }),
       addMenu,
-      h('button', { class: 'btn tiny', onclick: () => this.randomize() }, '🎲 HASARD'),
-      h('button', { class: 'btn tiny', onclick: () => this.clearPattern() }, '🧹 VIDER'),
+      h('button', { class: 'btn tiny', onclick: () => this.randomize() }, icon('dice'), 'HASARD'),
+      h('button', { class: 'btn tiny', onclick: () => this.clearPattern() }, icon('broom'), 'VIDER'),
       h('div', { class: 'sep' }),
       h('span', { class: 'hint' }, 'clic = pas · clic droit/molette = velocite · double-clic nom = piano roll'),
       h('div', { class: 'spacer' }),
@@ -48,7 +49,7 @@ export class Rack {
       h('span', { class: 'pill', id: 'rack-bars' }, '1 MES'),
       h('button', { class: 'btn tiny', onclick: () => this.setBars(1) }, '+1 MES'),
       h('div', { class: 'sep' }),
-      h('button', { class: 'btn tiny', onclick: () => c.openWindow('mixer') }, '🎚 MIXEUR'),
+      h('button', { class: 'btn tiny', onclick: () => c.openWindow('mixer') }, icon('mixer'), 'MIXEUR'),
     )
   }
 
@@ -142,7 +143,7 @@ export class Rack {
         class: ch.solo ? 'on' : '', title: 'Solo',
         onclick: () => { ch.solo = !ch.solo; c.sync(); c.markDirty(); this.render() },
       }, 'S')
-      const roll = h('button', { title: 'Piano roll', onclick: () => this.onOpenRoll(ch.id) }, '🎹')
+      const roll = h('button', { title: 'Piano roll', onclick: () => this.onOpenRoll(ch.id) }, icon('piano', 12))
       const del = h('button', {
         title: 'Supprimer', onclick: () => this.removeChannel(ch),
       }, '✕')
@@ -177,14 +178,14 @@ export class Rack {
 
     if (!c.project.channels.length) {
       this.scroll.appendChild(h('div', { class: 'hint', style: { padding: '20px', textAlign: 'center' } },
-        'Aucun channel. Ajoute-en un avec le menu la-haut. 👆'))
+        'Aucun channel. Ajoute-en un avec le menu « + AJOUTER » en haut.'))
     }
   }
 
   private renameChannel(ch: Channel) {
     const input = h('input', { class: 'txt', value: ch.name, style: { width: '100%' } })
     this.ctx.dialog({
-      title: 'Renommer le channel', icon: '✏️',
+      title: 'Renommer le channel', icon: 'wrench',
       body: h('div', {}, h('div', { style: { marginBottom: '8px' } }, 'Nouveau petit nom :'), input),
       buttons: [
         { label: 'OK', primary: true, onClick: () => { ch.name = input.value.slice(0, 28) || ch.name; this.ctx.markDirty(); this.ctx.refresh('all') } },

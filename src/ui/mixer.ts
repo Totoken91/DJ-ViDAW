@@ -5,6 +5,7 @@
    ============================================================ */
 
 import { h, clear } from './dom'
+import { icon } from './icons'
 import { knob, fader, meter } from './knob'
 import type { Ctx } from './ctx'
 import type { FxType, FxSlot } from '../core/state'
@@ -29,7 +30,7 @@ export class Mixer {
         h('div', { class: 'sep' }),
         h('span', { class: 'hint' }, 'clique une tranche puis ajoute des effets en dessous'),
         h('div', { class: 'spacer' }),
-        h('button', { class: 'btn tiny', onclick: () => this.routeSelected() }, '🔌 ROUTER LE CHANNEL ICI'),
+        h('button', { class: 'btn tiny', onclick: () => this.routeSelected() }, icon('plug'), 'ROUTER LE CHANNEL ICI'),
       ),
       h('div', { style: { flex: '0 0 auto', height: '246px', overflow: 'hidden', borderBottom: '1px solid #14141a' } }, this.stripsEl),
       this.fxEl,
@@ -122,7 +123,7 @@ export class Mixer {
 
     if (!ins.fx.length) {
       this.fxEl.appendChild(h('div', { class: 'hint', style: { textAlign: 'center', padding: '18px' } },
-        'Insert vide. Ajoute un BITCRUSH, tu vas voir c\'est rigolo. 👆'))
+        'Insert vide. Ajoute un BITCRUSH avec le menu ci-dessus, tu vas voir, c\'est rigolo.'))
       return
     }
 

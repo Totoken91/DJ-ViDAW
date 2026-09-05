@@ -16,6 +16,8 @@ export interface Ctx {
   toast(msg: string): void
   say(msg: string): void
   dialog(o: { title: string; icon?: string; body: HTMLElement | string; buttons?: { label: string; primary?: boolean; onClick?: () => void }[] }): void
+  /** Presente un rendu audio : ecoute immediate puis enregistrement. */
+  offerRender(buf: AudioBuffer, base: string, title?: string): void
   markDirty(): void
   channel(id: string): Channel | undefined
 }

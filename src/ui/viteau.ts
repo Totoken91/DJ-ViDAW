@@ -5,8 +5,9 @@
    ============================================================ */
 
 import { h } from './dom'
+import { viteauSVG, type VtMood } from './icons'
 
-const FACES = ['🕺', '🪩', '😎', '🤖', '👽', '🦆', '🎧', '🐸']
+const MOODS: VtMood[] = ['normal', 'cool', 'wink', 'wow', 'flat', 'sleep']
 
 const IDLE = [
   'Tu sais que tu peux glisser un fichier audio direct sur la fenetre ? Essaie avec la voix de ta mere.',
@@ -29,7 +30,7 @@ const IDLE = [
 ]
 
 const ON_PLAY = [
-  'Ca part ! 🔥', 'Vas-y monte le son.', 'Je sens le tube.', 'Bon... c\'est un debut.',
+  'Ca part !', 'Vas-y monte le son.', 'Je sens le tube.', 'Bon... c\'est un debut.',
   'La basse est un peu timide non ?', 'Oui. OUI. OUIII.',
 ]
 
@@ -44,7 +45,8 @@ export class Viteau {
 
   constructor() {
     this.bubble = h('div', { class: 'vt-bubble' })
-    this.body = h('div', { class: 'vt-body', onclick: () => this.poke() }, FACES[0])
+    this.body = h('div', { class: 'vt-body', onclick: () => this.poke(), title: 'Clique-moi dessus' })
+    this.body.innerHTML = viteauSVG('normal')
     this.el = h('div', { class: 'viteau hide', id: 'viteau' }, this.bubble, this.body)
     this.scheduleIdle()
   }
@@ -58,12 +60,15 @@ export class Viteau {
   }
 
   poke() {
-    this.face = (this.face + 1) % FACES.length
-    this.body.textContent = FACES[this.face]
+    this.face = (this.face + 1) % MOODS.length
+    this.body.innerHTML = viteauSVG(MOODS[this.face])
     this.say(IDLE[Math.floor(Math.random() * IDLE.length)])
   }
 
-  playQuip() { this.say(ON_PLAY[Math.floor(Math.random() * ON_PLAY.length)], 4200) }
+  /** L'expression suit ce qu'il raconte. */
+  private mood(m: VtMood) { this.body.innerHTML = viteauSVG(m) }
+
+  playQuip() { this.mood('cool'); this.say(ON_PLAY[Math.floor(Math.random() * ON_PLAY.length)], 4200) }
 
   say(msg: string, ms = 9000) {
     if (!this.enabled) return
@@ -73,16 +78,17 @@ export class Viteau {
       h('b', {}, 'VITEAU : '),
       document.createTextNode(msg),
     )
+    if (this.el.classList.contains('hide')) this.mood(MOODS[this.face])
     this.el.classList.remove('hide')
     clearTimeout(this.hideTimer)
     this.hideTimer = window.setTimeout(() => this.hide(), ms)
   }
 
-  hide() { this.el.classList.add('hide') }
+  hide() { this.el.classList.add('hide'); this.mood('sleep') }
 
   toggle() {
     this.enabled = !this.enabled
-    if (this.enabled) this.say('Je suis de retour. Vous m\'avez manque.')
+    if (this.enabled) { this.mood('wink'); this.say('Je suis de retour. Vous m\'avez manque.') }
     else this.hide()
     return this.enabled
   }

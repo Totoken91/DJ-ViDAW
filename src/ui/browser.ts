@@ -5,6 +5,7 @@
    ============================================================ */
 
 import { h, clear } from './dom'
+import { icon } from './icons'
 import type { Ctx } from './ctx'
 import type { StoredSample } from '../audio/samples'
 import { makeChannel } from '../core/state'
@@ -25,7 +26,7 @@ export class Browser {
     })
 
     const drop = h('div', { class: 'drop', onclick: () => input.click() },
-      h('div', { style: { fontSize: '26px' } }, '📂'),
+      icon('folder', 30),
       h('div', {}, 'GLISSE TES FICHIERS AUDIO ICI'),
       h('div', { style: { fontWeight: '400', opacity: '.7', marginTop: '4px' } }, 'wav · mp3 · ogg · flac · ou clique'),
     )
@@ -38,24 +39,24 @@ export class Browser {
       if (dt?.files.length) void this.importFiles([...dt.files])
     })
 
-    this.recBtn = h('button', { class: 'btn tiny rec', onclick: () => void this.toggleMic() }, '🎤 MICRO')
+    this.recBtn = h('button', { class: 'btn tiny rec', onclick: () => void this.toggleMic() }, icon('mic'), 'MICRO')
 
     this.el = h('div', { class: 'browser' },
       h('div', { class: 'bar thin' },
         h('span', { class: 'wordart', style: { fontSize: '13px' } }, 'SAMPLES'),
         h('div', { class: 'spacer' }),
         this.recBtn,
-        h('button', { class: 'btn tiny', onclick: () => input.click() }, '📁 FICHIER'),
+        h('button', { class: 'btn tiny', onclick: () => input.click() }, icon('folder'), 'FICHIER'),
       ),
       drop,
       h('div', { class: 'bar thin', style: { flexWrap: 'wrap' } },
         h('span', { class: 'hint' }, 'GENERER'),
         h('button', { class: 'btn xs', onclick: () => this.gen('sine') }, '〜 SINUS'),
         h('button', { class: 'btn xs', onclick: () => this.gen('noise') }, '▓ BRUIT'),
-        h('button', { class: 'btn xs', onclick: () => this.gen('siren') }, '🚨 SIRENE'),
-        h('button', { class: 'btn xs', onclick: () => this.gen('vinyl') }, '💿 VINYLE'),
-        h('button', { class: 'btn xs', onclick: () => this.gen('dial') }, '☎ MODEM 56K'),
-        h('button', { class: 'btn xs', onclick: () => this.gen('error') }, '⚠ ERREUR XP'),
+        h('button', { class: 'btn xs', onclick: () => this.gen('siren') }, 'SIRENE'),
+        h('button', { class: 'btn xs', onclick: () => this.gen('vinyl') }, 'VINYLE'),
+        h('button', { class: 'btn xs', onclick: () => this.gen('dial') }, 'MODEM 56K'),
+        h('button', { class: 'btn xs', onclick: () => this.gen('error') }, 'ERREUR XP'),
       ),
       this.list, input,
     )
@@ -74,7 +75,7 @@ export class Browser {
     }
     if (ok) {
       c.toast(`${ok} sample${ok > 1 ? 's' : ''} importe${ok > 1 ? 's' : ''} !`)
-      c.say('Sample charge ! Clique dessus pour creer un channel, puis va le decouper. 🔪')
+      c.say('Sample charge ! Clique dessus pour creer un channel, puis va le decouper.')
     }
     this.render()
   }
@@ -91,7 +92,7 @@ export class Browser {
         stream.getTracks().forEach((t) => t.stop())
         this.rec = null
         this.recBtn.classList.remove('on')
-        this.recBtn.textContent = '🎤 MICRO'
+        clear(this.recBtn); this.recBtn.append(icon('mic'), document.createTextNode('MICRO'))
         const blob = new Blob(chunks, { type: mr.mimeType || 'audio/webm' })
         try {
           const actx = await c.engine.init()
@@ -103,7 +104,7 @@ export class Browser {
       mr.start()
       this.rec = { stop: () => mr.stop() }
       this.recBtn.classList.add('on')
-      this.recBtn.textContent = '⏹ STOP'
+      clear(this.recBtn); this.recBtn.append(icon('stop'), document.createTextNode('STOP'))
       c.toast('Enregistrement en cours... Dis un truc bete.')
     } catch {
       c.toast('Micro refuse ou indisponible.')
@@ -204,7 +205,7 @@ export class Browser {
     }
 
     return h('div', { class: 'smp', ondblclick: assign },
-      h('span', {}, '🎵'),
+      icon('wave', 13),
       h('span', { class: 'nm', title: s.name }, s.name),
       h('span', { class: 'dur' }, `${s.duration.toFixed(2)}s`),
       h('button', { class: 'btn xs', onclick: (e: Event) => { e.stopPropagation(); void preview() } }, '▶'),

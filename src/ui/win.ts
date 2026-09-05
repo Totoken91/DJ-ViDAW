@@ -5,11 +5,12 @@
    ============================================================ */
 
 import { h, drag } from './dom'
+import { icon } from './icons'
 
 export interface WinOpts {
   id: string
   title: string
-  icon: string          // un emoji, on est en 2001
+  icon: string          // nom dans le jeu d'icones
   x: number; y: number
   w: number; h: number
   minW?: number; minH?: number
@@ -33,7 +34,7 @@ export class Win {
   constructor(opts: WinOpts, desktop: HTMLElement) {
     this.opts = opts
     this.body = h('div', { class: 'win-body' })
-    this.titleEl = h('span', { class: 'win-title-text' }, `${opts.icon}  ${opts.title}`)
+    this.titleEl = h('span', { class: 'win-title-text' }, opts.title)
 
     const btn = (cls: string, label: string, fn: () => void) =>
       h('button', {
@@ -42,6 +43,7 @@ export class Win {
       })
 
     const bar = h('div', { class: 'win-title' },
+      icon(opts.icon, 16),
       this.titleEl,
       h('div', { class: 'win-btns' },
         btn('min', 'Reduire', () => this.minimize()),
@@ -106,8 +108,9 @@ export class Win {
 
   setTitle(t: string) {
     this.opts.title = t
-    this.titleEl.textContent = `${this.opts.icon}  ${t}`
-    if (this.taskBtn) this.taskBtn.textContent = `${this.opts.icon} ${t}`
+    this.titleEl.textContent = t
+    const lbl = this.taskBtn?.querySelector('.tb-label')
+    if (lbl) lbl.textContent = t
   }
 
   minimize() {

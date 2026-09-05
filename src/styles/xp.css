@@ -21,9 +21,13 @@
   --fl-panel-2: #46464e;
   --fl-line: #1c1c20;
   --fl-text: #dfe2ea;
+  /* Le vert ne veut dire qu'une chose : actif. L'ambre est la couleur des
+     afficheurs, le rose celle des actions qui sortent du logiciel, le rouge
+     l'enregistrement. Une couleur qui signifie tout ne signifie rien. */
   --neon: #00ff9c;
   --neon-2: #ff4fd8;
   --neon-3: #4fe9ff;
+  --amber: #ffcb5c;
 }
 
 * { box-sizing: border-box; }
@@ -104,6 +108,7 @@ html, body {
   background: linear-gradient(180deg, #7ba7e8 0%, #6e9be0 50%, #5f8bd2 100%);
   color: #e6eefc;
 }
+.win-title .icw { filter: drop-shadow(0 1px 1px rgba(0,0,0,.55)); }
 .win-title-text {
   flex: 1 1 auto; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
   letter-spacing: .2px;
@@ -192,6 +197,7 @@ html, body {
   box-shadow: inset 0 1px 0 rgba(255,255,255,.35);
   text-shadow: 1px 1px 1px rgba(0,0,0,.45);
 }
+.task-btn .tb-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .task-btn:hover { filter: brightness(1.15); }
 .task-btn.down {
   background: linear-gradient(180deg, #1a55b6, #2569cf 60%, #2f79df 100%);
@@ -249,7 +255,7 @@ html, body {
 }
 .sm-item:hover { background: linear-gradient(180deg, #3d8ef5, #1a63dc); color: #fff; }
 .sm-item b { font-size: 11px; }
-.sm-item .ic { font-size: 18px; width: 22px; text-align: center; }
+.sm-item .ic { width: 22px; display: flex; justify-content: center; }
 .sm-sep { height: 1px; margin: 4px 6px; background: #c8d8ee; }
 .sm-foot {
   height: 34px; display: flex; align-items: center; justify-content: flex-end; gap: 12px;
