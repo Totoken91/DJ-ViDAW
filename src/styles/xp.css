@@ -1,0 +1,259 @@
+/* ============================================================
+   DJ ViDAW — COUCHE WINDOWS XP "LUNA"
+   Tout est reconstruit au pixel en CSS : aucune image binaire.
+   ============================================================ */
+
+:root {
+  --xp-blue-1: #0058ee;
+  --xp-blue-2: #3f8cf3;
+  --xp-blue-3: #0054e3;
+  --xp-blue-dark: #003fb8;
+  --xp-face: #ece9d8;
+  --xp-face-dark: #d4d0c8;
+  --xp-shadow: #808080;
+  --xp-light: #ffffff;
+  --xp-text: #000000;
+  --xp-green: #3dab3d;
+  --taskbar-h: 38px;
+
+  --fl-bg: #2b2b2f;
+  --fl-panel: #3a3a40;
+  --fl-panel-2: #46464e;
+  --fl-line: #1c1c20;
+  --fl-text: #dfe2ea;
+  --neon: #00ff9c;
+  --neon-2: #ff4fd8;
+  --neon-3: #4fe9ff;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0; padding: 0; height: 100%;
+  overflow: hidden;
+  font-family: Tahoma, "Segoe UI", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+  color: var(--xp-text);
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: default;
+}
+
+/* ---------- Le bureau : Bliss reconstitue au gradient ---------- */
+#desktop {
+  position: fixed; inset: 0;
+  overflow: hidden;
+  background:
+    /* nuages */
+    radial-gradient(ellipse 20% 6% at 20% 20%, rgba(255,255,255,.95) 0%, rgba(255,255,255,.5) 40%, transparent 68%),
+    radial-gradient(ellipse 12% 4% at 27% 24%, rgba(255,255,255,.8) 0%, transparent 68%),
+    radial-gradient(ellipse 16% 5% at 77% 13%, rgba(255,255,255,.9) 0%, transparent 70%),
+    radial-gradient(ellipse 10% 3.5% at 69% 17%, rgba(255,255,255,.7) 0%, transparent 70%),
+    /* colline arriere, plus pale */
+    radial-gradient(ellipse 90% 34% at 18% 108%, #8ecb5a 0 78%, transparent 79%),
+    /* colline principale : son arc superieur dessine l'horizon */
+    radial-gradient(ellipse 155% 62% at 50% 141%, #74c13c 0 62%, #5aa82c 62% 74%, transparent 75%),
+    /* ombre douce dans le creux */
+    radial-gradient(ellipse 70% 22% at 82% 112%, rgba(30,90,20,.5) 0%, transparent 70%),
+    /* ciel */
+    linear-gradient(180deg, #0e4fa8 0%, #1c6cc9 26%, #3f93df 52%, #7cbdee 72%, #b9def6 86%, #d9eefa 100%);
+  background-color: #4e9e28;
+}
+
+/* Trame de tramage (dither) sur tout le bureau */
+#desktop::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(0,0,0,.055) 0 1px, transparent 1px 2px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.035) 0 1px, transparent 1px 2px);
+  mix-blend-mode: overlay;
+  z-index: 1;
+}
+
+/* ---------- Fenetres ---------- */
+.win {
+  position: absolute;
+  display: flex; flex-direction: column;
+  background: var(--xp-face);
+  border: 1px solid var(--xp-blue-dark);
+  border-top: none;
+  border-radius: 8px 8px 0 0;
+  box-shadow: 3px 3px 14px rgba(0,0,0,.55), inset 0 0 0 1px rgba(255,255,255,.5);
+  z-index: 100;
+  min-width: 220px;
+}
+.win.minimized { display: none; }
+
+.win-title {
+  height: 27px; flex: 0 0 27px;
+  display: flex; align-items: center; gap: 6px;
+  padding: 0 3px 0 6px;
+  border-radius: 7px 7px 0 0;
+  background:
+    linear-gradient(180deg, #0f6cf5 0%, #0b5ee6 8%, #1c7cf7 40%, #0a5ad9 52%, #0850c9 88%, #0b5ee6 100%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.5), inset 0 -1px 0 rgba(0,0,0,.35);
+  color: #fff;
+  font: bold 12px/1 "Trebuchet MS", Tahoma, sans-serif;
+  text-shadow: 1px 1px 1px rgba(0,0,0,.6);
+  cursor: default;
+  touch-action: none;
+}
+.win:not(.active) .win-title {
+  background: linear-gradient(180deg, #7ba7e8 0%, #6e9be0 50%, #5f8bd2 100%);
+  color: #e6eefc;
+}
+.win-title-text {
+  flex: 1 1 auto; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  letter-spacing: .2px;
+}
+.win-btns { display: flex; gap: 2px; }
+.win-btn {
+  width: 21px; height: 21px; padding: 0;
+  border: 1px solid rgba(255,255,255,.75);
+  border-radius: 3px;
+  background: linear-gradient(180deg, #4b95f4, #1c6ae0 46%, #1257c8 100%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.55);
+  cursor: pointer; position: relative;
+}
+.win-btn:hover { filter: brightness(1.22); }
+.win-btn:active { filter: brightness(.85); }
+.win-btn.close { background: linear-gradient(180deg, #f88b6d, #e34f22 46%, #c3350f 100%); }
+.win-btn::before, .win-btn::after {
+  content: ''; position: absolute; background: #fff; border-radius: 1px;
+}
+.win-btn.min::before { left: 5px; right: 5px; bottom: 4px; height: 3px; }
+.win-btn.max::before { left: 4px; right: 4px; top: 4px; bottom: 4px; border: 2px solid #fff; background: none; border-top-width: 3px; }
+.win-btn.close::before, .win-btn.close::after {
+  left: 4px; right: 4px; top: 9px; height: 3px;
+}
+.win-btn.close::before { transform: rotate(45deg); }
+.win-btn.close::after { transform: rotate(-45deg); }
+
+.win-body {
+  flex: 1 1 auto; overflow: hidden;
+  margin: 3px; margin-top: 0;
+  background: var(--fl-bg);
+  border: 1px solid #12121a;
+  box-shadow: inset 1px 1px 0 rgba(0,0,0,.6), inset -1px -1px 0 rgba(255,255,255,.12);
+  color: var(--fl-text);
+  display: flex; flex-direction: column;
+  position: relative;
+}
+
+.win-grip {
+  position: absolute; right: 0; bottom: 0; width: 16px; height: 16px;
+  cursor: nwse-resize; touch-action: none;
+  background:
+    linear-gradient(135deg, transparent 48%, #9a9a9a 48% 56%, transparent 56%),
+    linear-gradient(135deg, transparent 66%, #9a9a9a 66% 74%, transparent 74%),
+    linear-gradient(135deg, transparent 84%, #9a9a9a 84% 92%, transparent 92%);
+  z-index: 5;
+}
+
+/* ---------- Barre des taches ---------- */
+#taskbar {
+  position: fixed; left: 0; right: 0; bottom: 0; height: var(--taskbar-h);
+  display: flex; align-items: stretch; gap: 3px;
+  z-index: 99999;
+  background: linear-gradient(180deg, #3f92f2 0%, #2b7ce8 8%, #1d61d3 42%, #1a5ccc 88%, #2a76e2 100%);
+  box-shadow: inset 0 1px 0 #6fb2fb, 0 -1px 6px rgba(0,0,0,.5);
+  padding: 2px 4px 2px 0;
+  font-size: 11px;
+}
+#start-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 0 18px 0 9px;
+  border: none; cursor: pointer;
+  color: #fff; font: italic bold 15px/1 "Trebuchet MS", Tahoma, sans-serif;
+  text-shadow: 1px 1px 2px rgba(0,0,0,.6);
+  background: linear-gradient(180deg, #5fbb44 0%, #4aa62f 10%, #388d21 52%, #2f7c1b 88%, #46a02c 100%);
+  border-radius: 0 12px 12px 0;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.5), inset -2px 0 4px rgba(0,0,0,.25);
+}
+#start-btn:hover { filter: brightness(1.14); }
+#start-btn.on { filter: brightness(.82); box-shadow: inset 2px 2px 6px rgba(0,0,0,.5); }
+.start-orb {
+  width: 20px; height: 20px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff 0 12%, #ff5f4d 14% 42%, #d13a1f 44% 60%, #8bc63f 62% 100%);
+  box-shadow: 0 0 0 2px rgba(255,255,255,.55), 0 1px 3px rgba(0,0,0,.5);
+  flex: 0 0 auto;
+}
+
+#task-btns { display: flex; gap: 3px; align-items: center; flex: 1 1 auto; overflow: hidden; padding-left: 6px; }
+.task-btn {
+  max-width: 168px; min-width: 62px; height: 30px;
+  display: flex; align-items: center; gap: 5px;
+  padding: 0 8px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  border: 1px solid #0f4bb0; border-radius: 3px;
+  background: linear-gradient(180deg, #4d9bf5, #2a72dd 50%, #205fc4 100%);
+  color: #fff; cursor: pointer; font-size: 11px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.35);
+  text-shadow: 1px 1px 1px rgba(0,0,0,.45);
+}
+.task-btn:hover { filter: brightness(1.15); }
+.task-btn.down {
+  background: linear-gradient(180deg, #1a55b6, #2569cf 60%, #2f79df 100%);
+  box-shadow: inset 2px 2px 5px rgba(0,0,0,.45);
+}
+#tray {
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 10px; margin: 2px 0;
+  background: linear-gradient(180deg, #1791dc 0%, #14a5e8 12%, #0d7fd0 60%, #1490da 100%);
+  box-shadow: inset 1px 0 0 rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.35);
+  color: #fff; text-shadow: 1px 1px 1px rgba(0,0,0,.5);
+  border-radius: 2px;
+  font-size: 11px;
+}
+.tray-icon { cursor: pointer; font-size: 13px; line-height: 1; filter: drop-shadow(0 1px 1px rgba(0,0,0,.5)); }
+.tray-icon:hover { transform: scale(1.18); }
+#clock { min-width: 52px; text-align: center; font-variant-numeric: tabular-nums; }
+
+/* ---------- Menu Demarrer ---------- */
+#start-menu {
+  position: fixed; left: 3px; bottom: var(--taskbar-h); width: 330px;
+  z-index: 99998; display: none;
+  border-radius: 8px 8px 0 0;
+  background: #fff;
+  border: 1px solid var(--xp-blue-dark);
+  box-shadow: 0 -4px 20px rgba(0,0,0,.55);
+  overflow: hidden;
+  animation: slideUp .13s ease-out;
+}
+#start-menu.on { display: block; }
+@keyframes slideUp { from { transform: translateY(14px); opacity: .2 } to { transform: none; opacity: 1 } }
+.sm-head {
+  height: 56px; display: flex; align-items: center; gap: 10px; padding: 0 12px;
+  background: linear-gradient(180deg, #1a70e8, #0a52c8 52%, #0d5ad4 100%);
+  color: #fff; font: bold 15px/1 "Trebuchet MS", Tahoma, sans-serif;
+  text-shadow: 1px 1px 2px rgba(0,0,0,.6);
+  border-bottom: 2px solid #ff9d2e;
+}
+.sm-avatar {
+  width: 40px; height: 40px; border-radius: 4px;
+  background: linear-gradient(135deg, #ffd23d, #ff4fd8 60%, #4fe9ff);
+  border: 2px solid #fff; display: grid; place-items: center; font-size: 22px;
+}
+.sm-cols { display: flex; background: #fff; }
+.sm-left { flex: 1 1 58%; padding: 6px; background: #fff; }
+.sm-right {
+  flex: 1 1 42%; padding: 6px;
+  background: linear-gradient(180deg, #d3e5fa, #c1d9f7);
+  border-left: 1px solid #a8c8ec;
+}
+.sm-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 8px; border-radius: 3px; cursor: pointer;
+  color: #000; font-size: 11px;
+}
+.sm-item:hover { background: linear-gradient(180deg, #3d8ef5, #1a63dc); color: #fff; }
+.sm-item b { font-size: 11px; }
+.sm-item .ic { font-size: 18px; width: 22px; text-align: center; }
+.sm-sep { height: 1px; margin: 4px 6px; background: #c8d8ee; }
+.sm-foot {
+  height: 34px; display: flex; align-items: center; justify-content: flex-end; gap: 12px;
+  padding: 0 12px;
+  background: linear-gradient(180deg, #2f83ee, #0d55cb);
+  color: #fff; font-size: 11px;
+}
+.sm-foot span { display: flex; align-items: center; gap: 5px; cursor: pointer; }
+.sm-foot span:hover { text-decoration: underline; }

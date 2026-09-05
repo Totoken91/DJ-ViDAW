@@ -1,0 +1,17 @@
+{
+  "name": "dj-vidaw",
+  "version": "1.0.0",
+  "private": true,
+  "description": "DJ ViDAW - le DAW le plus goofy du web. Par DJ Viteau.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vite": "^5.4.10"
+  }
+}

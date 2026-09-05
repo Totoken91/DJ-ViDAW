@@ -1,0 +1,275 @@
+/* ============================================================
+   DJ ViDAW — COUCHE FL STUDIO / Y2K
+   Panneaux sombres, LED, tramage, chrome et couleurs qui piquent.
+   ============================================================ */
+
+/* ---------- Trames de tramage reutilisables ---------- */
+.dither {
+  background-image:
+    repeating-conic-gradient(rgba(255,255,255,.05) 0 25%, transparent 0 50%);
+  background-size: 4px 4px;
+}
+.dither-2 {
+  background-image:
+    repeating-linear-gradient(45deg, rgba(255,255,255,.06) 0 1px, transparent 1px 3px);
+}
+.scanlines::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 3;
+  background: repeating-linear-gradient(0deg, rgba(0,0,0,.22) 0 1px, transparent 1px 3px);
+  mix-blend-mode: multiply;
+}
+
+/* ---------- Barres d'outils internes ---------- */
+.bar {
+  display: flex; align-items: center; gap: 5px;
+  padding: 4px 6px; flex: 0 0 auto;
+  background: linear-gradient(180deg, #55555f, #3c3c44 55%, #303038);
+  border-bottom: 1px solid #16161c;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.14);
+  flex-wrap: wrap;
+}
+.bar.thin { padding: 2px 5px; }
+.spacer { flex: 1 1 auto; }
+
+.sep { width: 1px; align-self: stretch; margin: 1px 3px; background: linear-gradient(#16161c, #6a6a76); }
+
+/* ---------- Boutons ---------- */
+.btn {
+  font: 700 10px/1 Tahoma, sans-serif;
+  letter-spacing: .3px;
+  padding: 5px 9px;
+  color: #f2f4fa;
+  background: linear-gradient(180deg, #6b6b78, #4a4a55 52%, #3a3a44);
+  border: 1px solid #15151b;
+  border-radius: 3px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.28), 0 1px 2px rgba(0,0,0,.45);
+  cursor: pointer;
+  white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.btn:hover { filter: brightness(1.2); }
+.btn:active, .btn.on {
+  background: linear-gradient(180deg, #2c2c34, #3d3d47);
+  box-shadow: inset 1px 1px 4px rgba(0,0,0,.7);
+  color: var(--neon);
+}
+.btn.hot { background: linear-gradient(180deg, #ff7ad9, #d81ea8 55%, #a3157f); color: #fff; }
+.btn.go  { background: linear-gradient(180deg, #6bff9d, #14c95e 55%, #0d8f42); color: #06210f; }
+.btn.rec { background: linear-gradient(180deg, #ff8a8a, #e01f1f 55%, #9d0f0f); color: #fff; }
+.btn.tiny { padding: 3px 6px; font-size: 9px; }
+.btn.xs { padding: 1px 4px; font-size: 9px; border-radius: 2px; }
+
+/* ---------- Afficheurs LCD ---------- */
+.lcd {
+  font: 700 15px/1 "Courier New", monospace;
+  color: var(--neon);
+  background: #0b1410;
+  border: 1px solid #05130c;
+  box-shadow: inset 0 0 10px rgba(0,255,156,.28), inset 1px 1px 3px rgba(0,0,0,.9);
+  padding: 4px 8px; border-radius: 2px;
+  text-shadow: 0 0 6px rgba(0,255,156,.85);
+  letter-spacing: 1px;
+  cursor: ns-resize; touch-action: none;
+  display: inline-flex; align-items: baseline; gap: 4px;
+}
+.lcd small { font-size: 9px; opacity: .65; letter-spacing: 0; }
+.lcd.pink { color: var(--neon-2); text-shadow: 0 0 6px rgba(255,79,216,.85); box-shadow: inset 0 0 10px rgba(255,79,216,.25), inset 1px 1px 3px rgba(0,0,0,.9); }
+.lcd.cyan { color: var(--neon-3); text-shadow: 0 0 6px rgba(79,233,255,.85); box-shadow: inset 0 0 10px rgba(79,233,255,.25), inset 1px 1px 3px rgba(0,0,0,.9); }
+
+/* ---------- Potards ---------- */
+.knob {
+  display: inline-flex; flex-direction: column; align-items: center; gap: 1px;
+  cursor: ns-resize; touch-action: none; padding: 1px;
+}
+.knob.grabbing { filter: brightness(1.25); }
+.knob-cv { display: block; }
+.knob-label { font: 700 8px/1 Tahoma, sans-serif; color: #b9bfcd; letter-spacing: .4px; text-transform: uppercase; }
+.knob-val { font: 700 8px/1.2 "Courier New", monospace; color: var(--neon); min-height: 10px; }
+
+/* ---------- Faders ---------- */
+.fader { display: flex; justify-content: center; }
+.fader-track {
+  position: relative; width: 16px;
+  background: linear-gradient(90deg, #16161c, #2a2a32 40%, #16161c);
+  border: 1px solid #0d0d12;
+  border-radius: 3px;
+  box-shadow: inset 1px 1px 3px rgba(0,0,0,.9);
+  cursor: ns-resize; touch-action: none;
+}
+.fader-fill {
+  position: absolute; left: 3px; right: 3px; bottom: 0;
+  background: linear-gradient(0deg, #00b46a, var(--neon));
+  border-radius: 2px; opacity: .55;
+}
+.fader-cap {
+  position: absolute; left: -5px; right: -5px; height: 16px;
+  background: linear-gradient(180deg, #f4f4f8, #b6b9c4 45%, #6d707c 52%, #cfd2da 100%);
+  border: 1px solid #101015; border-radius: 3px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.6);
+}
+.fader-cap::after {
+  content: ''; position: absolute; left: 2px; right: 2px; top: 50%;
+  height: 2px; background: #ff3b6b; transform: translateY(-50%);
+  box-shadow: 0 0 4px #ff3b6b;
+}
+.meter { display: block; border: 1px solid #0b0b10; border-radius: 2px; }
+
+/* ---------- Grille du sequenceur ---------- */
+.rack { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+.rack-scroll { flex: 1 1 auto; overflow: auto; }
+.rack-row {
+  display: flex; align-items: center; gap: 4px;
+  padding: 2px 4px;
+  border-bottom: 1px solid #24242b;
+  min-height: 30px;
+}
+.rack-row:nth-child(odd) { background: rgba(255,255,255,.022); }
+.rack-row.sel { background: linear-gradient(90deg, rgba(0,255,156,.16), transparent 60%); }
+
+.ch-btn {
+  width: 132px; flex: 0 0 132px;
+  display: flex; align-items: center; gap: 5px;
+  padding: 3px 6px;
+  border: 1px solid #101016; border-radius: 3px;
+  background: linear-gradient(180deg, #5c5c68, #414149 55%, #33333b);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.2);
+  cursor: pointer; overflow: hidden;
+  font: 700 10px/1.2 Tahoma, sans-serif; color: #eef0f6;
+}
+.ch-btn:hover { filter: brightness(1.16); }
+.ch-name { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ch-led {
+  width: 9px; height: 9px; flex: 0 0 9px; border-radius: 2px;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.6), 0 0 5px currentColor;
+}
+.ch-tag { font: 700 7px/1 Tahoma, "DejaVu Sans", Verdana, sans-serif; opacity: .55; letter-spacing: .5px; }
+
+.mini { display: flex; gap: 2px; flex: 0 0 auto; }
+.mini button {
+  width: 16px; height: 16px; padding: 0;
+  font: 700 8px/1 Tahoma, "DejaVu Sans", Verdana, sans-serif; color: #cfd3dd;
+  background: linear-gradient(180deg, #55555f, #3b3b43);
+  border: 1px solid #14141a; border-radius: 2px; cursor: pointer;
+}
+.mini button.on { background: linear-gradient(180deg, #ffd23d, #d99e00); color: #241a00; }
+.mini button.on.m { background: linear-gradient(180deg, #ff6b6b, #b81717); color: #fff; }
+
+.steps { display: flex; gap: 2px; flex: 0 0 auto; }
+.step {
+  width: 20px; height: 22px;
+  border: 1px solid #101015; border-radius: 2px;
+  background: linear-gradient(180deg, #4a4a54, #33333b);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.13);
+  cursor: pointer; position: relative;
+}
+.step.beat { background: linear-gradient(180deg, #5a5a66, #3d3d47); }
+.step.bar4 { box-shadow: inset 0 1px 0 rgba(255,255,255,.2), inset 2px 0 0 rgba(255,255,255,.22); }
+.step:hover { filter: brightness(1.35); }
+.step.on {
+  background: linear-gradient(180deg, #ffffff 0 12%, var(--sc, #ff8a3d) 14%, #7a3a12 100%);
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.55), 0 0 7px var(--sc, #ff8a3d);
+}
+.step.on::after {
+  content: ''; position: absolute; left: 2px; right: 2px; bottom: 1px;
+  height: var(--vel, 60%); background: rgba(255,255,255,.35); border-radius: 1px;
+}
+.step.play { outline: 2px solid #fff; outline-offset: -1px; }
+.playcol { box-shadow: inset 0 0 0 99px rgba(255,255,255,.14) !important; }
+
+/* ---------- Piano roll / playlist (canvas) ---------- */
+.cv-host { flex: 1 1 auto; position: relative; overflow: hidden; background: #1e1e24; }
+.cv-host canvas { display: block; position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; }
+
+/* ---------- Mixeur ---------- */
+.mixer { display: flex; height: 100%; overflow-x: auto; padding: 6px; gap: 4px; }
+.strip {
+  width: 66px; flex: 0 0 66px;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 5px 3px;
+  background: linear-gradient(180deg, #45454f, #34343c);
+  border: 1px solid #16161c; border-radius: 4px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.15);
+}
+.strip.sel { box-shadow: inset 0 0 0 2px var(--neon), inset 0 1px 0 rgba(255,255,255,.15); }
+.strip.master { background: linear-gradient(180deg, #6a4f7a, #43304f); }
+.strip-name {
+  width: 100%; text-align: center; font: 700 9px/1.4 Tahoma, "DejaVu Sans", Verdana, sans-serif;
+  background: #14141a; border: 1px solid #0a0a0e; border-radius: 2px;
+  padding: 2px 1px; color: #d6dae4; cursor: pointer;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.strip-row { display: flex; gap: 4px; align-items: flex-end; }
+
+/* ---------- Rack FX ---------- */
+.fxrack { display: flex; flex-direction: column; gap: 4px; padding: 6px; overflow: auto; height: 100%; }
+.fxunit {
+  flex: 0 0 auto;
+  border: 1px solid #14141a; border-radius: 4px;
+  background: linear-gradient(180deg, #4b4b56, #37373f);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.16);
+  overflow: hidden;
+}
+.fxunit.off { opacity: .45; filter: grayscale(.7); }
+.fxhead {
+  display: flex; align-items: center; gap: 6px; padding: 3px 6px;
+  background: linear-gradient(180deg, #6d5f8c, #4a3f63);
+  border-bottom: 1px solid #14141a;
+  font: 700 10px/1 Tahoma, "DejaVu Sans", Verdana, sans-serif; color: #fff; letter-spacing: .5px;
+  text-shadow: 1px 1px 0 rgba(0,0,0,.5);
+}
+.fxbody { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px 6px 10px; align-items: flex-start; }
+
+/* ---------- Navigateur de samples ---------- */
+.browser { display: flex; flex-direction: column; height: 100%; }
+.drop {
+  margin: 6px; padding: 14px 8px; text-align: center;
+  border: 2px dashed #7d7d8c; border-radius: 6px;
+  color: #b7bcc9; font: 700 10px/1.5 Tahoma, "DejaVu Sans", Verdana, sans-serif;
+  background: repeating-linear-gradient(45deg, rgba(255,255,255,.03) 0 6px, transparent 6px 12px);
+  cursor: pointer;
+}
+.drop.hover { border-color: var(--neon); color: var(--neon); background: rgba(0,255,156,.09); }
+.smp-list { flex: 1 1 auto; overflow: auto; padding: 0 6px 6px; }
+.smp {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 6px; margin-bottom: 3px;
+  background: linear-gradient(180deg, #45454f, #35353d);
+  border: 1px solid #15151b; border-radius: 3px;
+  cursor: grab; font: 700 10px/1.2 Tahoma, "DejaVu Sans", Verdana, sans-serif; color: #e4e7ef;
+}
+.smp:hover { filter: brightness(1.2); border-color: var(--neon); }
+.smp .dur { font: 400 9px/1 "Courier New", monospace; color: #8f95a4; }
+.smp .nm { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- Onglets ---------- */
+.tabs { display: flex; gap: 2px; padding: 4px 4px 0; background: #2a2a31; border-bottom: 1px solid #14141a; flex: 0 0 auto; }
+.tab {
+  padding: 4px 10px; font: 700 10px/1 Tahoma, "DejaVu Sans", Verdana, sans-serif; color: #b6bbc8; cursor: pointer;
+  background: linear-gradient(180deg, #45454f, #33333b);
+  border: 1px solid #15151b; border-bottom: none; border-radius: 4px 4px 0 0;
+}
+.tab.on { color: var(--neon); background: linear-gradient(180deg, #5b5b68, #3f3f49); }
+
+/* ---------- Divers ---------- */
+.hint { font: 400 9px/1.4 Tahoma, "DejaVu Sans", Verdana, sans-serif; color: #8b90a0; padding: 4px 6px; }
+.pill {
+  font: 700 9px/1 Tahoma, "DejaVu Sans", Verdana, sans-serif; padding: 3px 6px; border-radius: 9px;
+  background: #14141a; color: var(--neon-3); border: 1px solid #0a0a0e;
+}
+input.txt, select.sel {
+  font: 700 10px/1 Tahoma, "DejaVu Sans", Verdana, sans-serif; color: #e6e9f1;
+  background: #14141a; border: 1px solid #0a0a0e; border-radius: 2px;
+  padding: 4px 5px; outline: none;
+}
+input.txt:focus { box-shadow: 0 0 0 1px var(--neon); }
+select.sel { cursor: pointer; }
+.check { display: inline-flex; align-items: center; gap: 4px; font: 700 9px/1 Tahoma, "DejaVu Sans", Verdana, sans-serif; color: #c3c8d4; cursor: pointer; }
+.check input { accent-color: #00c96f; }
+
+::-webkit-scrollbar { width: 15px; height: 15px; }
+::-webkit-scrollbar-track { background: #d4d0c8; box-shadow: inset 1px 1px 0 #808080; }
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #fdfdfd, #d8d4cb 45%, #b7b2a6);
+  border: 1px solid #6f6a5e; border-radius: 2px;
+}
+::-webkit-scrollbar-corner { background: #d4d0c8; }
