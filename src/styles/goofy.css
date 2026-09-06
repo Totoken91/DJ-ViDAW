@@ -317,3 +317,40 @@ body, .win {
   position: fixed;
   inset: 74px 0 var(--taskbar-h) 0;
 }
+
+/* ---------- Premiers pas ---------- */
+#welcome {
+  position: absolute; right: 16px; top: 14px; z-index: 3;
+  width: 268px;
+  background: #f2efe4;
+  border: 2px outset #fffdf6;
+  box-shadow: 4px 4px 14px rgba(0,0,0,.45);
+  color: #1a1a1a;
+}
+.wc-head {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 6px 4px 8px;
+  background: linear-gradient(180deg, #0f6cf5, #0850c9);
+  color: #fff; font: 700 11px/1.6 Tahoma, "DejaVu Sans", Verdana, sans-serif;
+  letter-spacing: 1.2px;
+}
+.wc-head span { flex: 1 1 auto; }
+.wc-x {
+  width: 17px; height: 16px; padding: 0; cursor: pointer;
+  border: 1px solid #fff; border-radius: 2px; color: #fff;
+  background: linear-gradient(180deg, #f88b6d, #c3350f);
+  font: 700 10px/1 Tahoma, sans-serif;
+}
+#welcome ol { margin: 0; padding: 8px 10px 8px 26px; display: grid; gap: 8px; }
+#welcome li { font: 400 11px/1.45 Tahoma, "DejaVu Sans", Verdana, sans-serif; }
+#welcome li b { display: block; font-size: 11px; }
+#welcome li span { display: block; color: #444; }
+#welcome li .btn { margin-top: 4px; }
+.wc-foot {
+  padding: 6px 10px 8px; border-top: 1px solid #cfc9b8;
+  font: 400 10px/1.5 Tahoma, "DejaVu Sans", Verdana, sans-serif; color: #555;
+}
+.wc-foot kbd {
+  font: 700 10px/1 "Courier New", monospace; padding: 1px 4px;
+  background: #fff; border: 1px solid #999; border-radius: 2px;
+}

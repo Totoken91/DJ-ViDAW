@@ -1,3 +1,7 @@
+import type { SynthParams } from '../audio/synth'
+import { defaultSynth as makeSynth } from '../audio/synth'
+export type { SynthParams } from '../audio/synth'
+
 /* ============================================================
    DJ ViDAW — MODELE DE PROJET
    "Un DAW c'est juste un tableur qui fait du bruit" — DJ Viteau
@@ -30,28 +34,6 @@ export interface SamplerParams {
   slices: number[]   // positions normalisées des chops (triées)
   stretch: boolean   // si vrai le sample se cale au tempo (approximation par playbackRate)
   bpmOrigin: number  // bpm supposé du sample pour le stretch
-}
-
-export type OscShape = 'saw' | 'square' | 'sine' | 'triangle' | 'noise'
-
-export interface SynthParams {
-  osc1: OscShape
-  osc2: OscShape
-  mix: number        // 0..1 balance osc1/osc2
-  detune: number     // cents
-  unison: number     // 1..5 voix
-  spread: number     // 0..1
-  cutoff: number     // Hz
-  reso: number       // 0..25
-  envAmt: number     // 0..1 -> modulation du filtre
-  attack: number
-  decay: number
-  sustain: number
-  release: number
-  fAttack: number
-  fDecay: number
-  glide: number
-  sub: number        // 0..1 niveau sous-octave
 }
 
 export interface Channel {
@@ -183,14 +165,7 @@ export function defaultSampler(): SamplerParams {
   }
 }
 
-export function defaultSynth(): SynthParams {
-  return {
-    osc1: 'saw', osc2: 'square', mix: 0.35, detune: 9, unison: 3, spread: 0.4,
-    cutoff: 2400, reso: 6, envAmt: 0.55,
-    attack: 0.006, decay: 0.28, sustain: 0.55, release: 0.22,
-    fAttack: 0.004, fDecay: 0.32, glide: 0, sub: 0.25,
-  }
-}
+export const defaultSynth = makeSynth
 
 export function makeChannel(type: ChannelType, name: string, i: number, kind?: DrumKind): Channel {
   const ch: Channel = {
@@ -247,67 +222,51 @@ export function makeFx(type: FxType): FxSlot {
 }
 
 /* ------------------------------------------------------------------ */
-/* Projet de démarrage : un petit beat qui tourne direct                */
+/* Projet vierge : un rack pret a l'emploi, aucune note                 */
 /* ------------------------------------------------------------------ */
 
-export function demoProject(): Project {
-  const kick = makeChannel('drum', 'KICK 909', 0, 'kick')
-  const clap = makeChannel('drum', 'CLAP XP', 1, 'clap')
-  const hat = makeChannel('drum', 'HAT SEC', 2, 'hat')
-  const ohat = makeChannel('drum', 'OPEN HAT', 3, 'ohat')
-  const bass = makeChannel('synth', 'BASSE GRASSE', 4)
-  const lead = makeChannel('synth', 'LEAD Y2K', 5)
-  const smp = makeChannel('sampler', 'SAMPLE 1', 6)
-
-  bass.synth = { ...defaultSynth(), osc1: 'saw', osc2: 'square', cutoff: 620, reso: 9, envAmt: 0.7, decay: 0.35, sustain: 0.3, sub: 0.6, unison: 1, detune: 0 }
-  bass.pitch = -12
-  lead.synth = { ...defaultSynth(), osc1: 'square', osc2: 'saw', cutoff: 4200, reso: 5, unison: 3, detune: 14, decay: 0.5, sustain: 0.4, release: 0.4 }
-  lead.vol = 0.55
-
-  const pat = makePattern('BEAT 1', 0)
-  pat.bars = 1
-  const n = (ch: string, t: number, key = 60, len = 1, vel = 0.9): Note =>
-    ({ id: uid('n'), ch, t, len, key, vel, slice: -1 })
-
-  for (const t of [0, 4, 8, 10, 14]) pat.notes.push(n(kick.id, t))
-  for (const t of [4, 12]) pat.notes.push(n(clap.id, t))
-  for (let t = 0; t < 16; t += 2) pat.notes.push(n(hat.id, t, 60, 1, t % 4 === 0 ? 0.85 : 0.5))
-  for (const t of [6, 14]) pat.notes.push(n(ohat.id, t, 60, 1, 0.6))
-
-  const bl = [0, 3, 6, 8, 10, 11, 14]
-  const keys = [60, 60, 63, 60, 65, 63, 58]
-  bl.forEach((t, i) => pat.notes.push(n(bass.id, t, keys[i], 2, 0.95)))
-
-  const pat2 = makePattern('BEAT 2', 1)
-  pat2.bars = 1
-  for (const t of [0, 6, 8, 14]) pat2.notes.push(n(kick.id, t))
-  for (const t of [4, 12]) pat2.notes.push(n(clap.id, t))
-  for (let t = 0; t < 16; t++) pat2.notes.push(n(hat.id, t, 60, 1, t % 2 === 0 ? 0.8 : 0.35))
-  ;[[0, 72], [2, 75], [4, 79], [7, 77], [8, 75], [12, 72], [14, 70]].forEach(([t, k]) =>
-    pat2.notes.push(n(lead.id, t, k, 2, 0.8)))
-
-  const inserts = [0, 1, 2, 3, 4, 5, 6, 7, 8].map(makeInsert)
-  inserts[0].fx = [makeFx('comp'), makeFx('eq3')]
-  inserts[0].fx[0].p.thr = -14
-  inserts[0].fx[0].p.ratio = 3
-
+export function emptyProject(): Project {
+  const chans = [
+    makeChannel('drum', 'KICK', 0, 'kick'),
+    makeChannel('drum', 'CLAP', 1, 'clap'),
+    makeChannel('drum', 'HAT', 2, 'hat'),
+    makeChannel('drum', 'OPEN HAT', 3, 'ohat'),
+    makeChannel('synth', 'BASSE', 4),
+    makeChannel('synth', 'LEAD', 5),
+    makeChannel('sampler', 'SAMPLER', 6),
+  ]
+  const pat = makePattern('MOTIF 1', 0)
   return {
-    name: 'SANS_TITRE_FINAL_v3_VRAI_FINAL',
+    name: 'SANS_TITRE',
     author: 'DJ Viteau',
     bpm: 128, swing: 0.08,
-    channels: [kick, clap, hat, ohat, bass, lead, smp],
-    patterns: [pat, pat2],
+    channels: chans,
+    patterns: [pat],
     currentPattern: pat.id,
-    clips: [
-      { id: uid('c'), pat: pat.id, track: 0, start: 0, len: 16 },
-      { id: uid('c'), pat: pat.id, track: 0, start: 16, len: 16 },
-      { id: uid('c'), pat: pat2.id, track: 1, start: 32, len: 16 },
-      { id: uid('c'), pat: pat.id, track: 0, start: 48, len: 16 },
-    ],
-    inserts,
+    clips: [],
+    inserts: [0, 1, 2, 3, 4, 5, 6, 7, 8].map(makeInsert),
     masterVol: 0.8,
     songLenBars: 16,
   }
+}
+
+/** Les projets enregistres avant la refonte du synthetiseur portent un autre
+    format de parametres : plutot que de planter, on remet ces channels a neuf. */
+export function migrateProject(p: Project): Project {
+  for (const ch of p.channels) {
+    if (ch.type === 'synth') {
+      const s = ch.synth as unknown as Record<string, unknown> | undefined
+      if (!s || !s.oscA || !s.ampEnv) ch.synth = defaultSynth()
+    }
+  }
+  if (!p.patterns?.length) {
+    const pat = makePattern('MOTIF 1', 0)
+    p.patterns = [pat]
+    p.currentPattern = pat.id
+  }
+  if (!p.patterns.find((x) => x.id === p.currentPattern)) p.currentPattern = p.patterns[0].id
+  if (!p.inserts?.length) p.inserts = [0, 1, 2, 3, 4, 5, 6, 7, 8].map(makeInsert)
+  return p
 }
 
 /* ------------------------------------------------------------------ */

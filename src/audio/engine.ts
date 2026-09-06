@@ -27,7 +27,8 @@ export class Engine {
   step = 0
   private nextTime = 0
   private timer: number | null = null
-  private startedAt = 0
+  private originTime = 0
+  private originStep = 0
   private tapNode: AudioWorkletNode | null = null
   private recChunks: { l: F32; r: F32 }[] = []
   recording = false
@@ -86,7 +87,8 @@ export class Engine {
     const ctx = this.ctx!
     this.playing = true
     this.nextTime = ctx.currentTime + 0.06
-    this.startedAt = this.nextTime
+    this.originTime = this.nextTime
+    this.originStep = this.step
     this.sync()
     this.tick()
     this.timer = window.setInterval(() => this.tick(), LOOKAHEAD_MS)
@@ -115,7 +117,20 @@ export class Engine {
 
   seek(step: number) {
     this.step = Math.max(0, Math.floor(step))
-    if (this.ctx) this.nextTime = Math.max(this.ctx.currentTime + 0.02, this.nextTime)
+    if (!this.ctx) return
+    // on recale l'origine pour que la tete de lecture affichee reste juste
+    this.nextTime = this.ctx.currentTime + 0.04
+    this.originTime = this.nextTime
+    this.originStep = this.step
+  }
+
+  /** Pas actuellement entendu, deduit de l'horloge audio.
+      C'est plus juste et bien moins couteux qu'un timer par pas. */
+  get uiStep(): number {
+    if (!this.ctx || !this.playing) return -1
+    const n = this.originStep + Math.floor((this.ctx.currentTime - this.originTime) / this.stepDur)
+    if (n < 0) return -1
+    return ((n % this.loopLength()) + this.loopLength()) % this.loopLength()
   }
 
   private loopLength(): number {
@@ -138,10 +153,6 @@ export class Engine {
     while (this.nextTime < horizon && guard++ < 256) {
       const s = this.step % len
       this.fireStep(s, this.nextTime + this.swingOffset(s))
-      const at = this.nextTime
-      const cur = this.step
-      const delay = Math.max(0, (at - ctx.currentTime) * 1000)
-      window.setTimeout(() => { if (this.playing) this.onStep?.(cur % len) }, delay)
       this.nextTime += this.stepDur
       this.step++
     }
@@ -214,6 +225,6 @@ export class Engine {
 
   get position() {
     if (!this.ctx || !this.playing) return 0
-    return clamp((this.ctx.currentTime - this.startedAt) / this.stepDur, 0, Number.MAX_SAFE_INTEGER)
+    return clamp((this.ctx.currentTime - this.originTime) / this.stepDur, 0, Number.MAX_SAFE_INTEGER)
   }
 }

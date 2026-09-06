@@ -7,9 +7,10 @@ import './styles/xp.css'
 import './styles/daw.css'
 import './styles/goofy.css'
 import './styles/nightcore.css'
+import './styles/synth.css'
 
 import { h, clear } from './ui/dom'
-import { Win } from './ui/win'
+import { Win, type Geometry } from './ui/win'
 import { Rack } from './ui/rack'
 import { PianoRoll } from './ui/pianoroll'
 import { Playlist } from './ui/playlist'
@@ -19,7 +20,8 @@ import { Browser } from './ui/browser'
 import { Nightcore } from './ui/nightcore'
 import { Transport } from './ui/transport'
 import { Viteau } from './ui/viteau'
-import { boot, dialog, toast, Taskbar, Saver, desktopIcon, type MenuEntry } from './ui/shell'
+import { boot, dialog, closeDialog, toast, Taskbar, Saver, desktopIcon, type MenuEntry } from './ui/shell'
+import { icon } from './ui/icons'
 import { installWallpaper } from './ui/wallpaper'
 import type { Ctx } from './ui/ctx'
 
@@ -27,15 +29,17 @@ import { Engine } from './audio/engine'
 import { Samples } from './audio/samples'
 import { renderProject, bufferToWav, bufferToWebm, canEncodeWebm } from './audio/render'
 import { saveFile, isEmbedded, type SaveResult } from './core/save'
-import { demoProject, type Project, clamp } from './core/state'
+import { emptyProject, migrateProject, type Project, clamp } from './core/state'
 
 /* ------------------------------------------------------------------ */
 /* Etat global                                                         */
 /* ------------------------------------------------------------------ */
 
 const SAVE_KEY = 'vidaw.project.v1'
+const LAYOUT_KEY = 'vidaw.layout.v1'
+const SEEN_KEY = 'vidaw.seen.v1'
 
-let project: Project = demoProject()
+let project: Project = emptyProject()
 const samples = new Samples()
 const engine = new Engine(project, samples)
 
@@ -47,6 +51,61 @@ const saver = new Saver()
 let rack: Rack, roll: PianoRoll, playlist: Playlist, mixer: Mixer, chEditor: ChannelEditor, browser: Browser, transport: Transport, nightcore: Nightcore
 const wins = new Map<string, Win>()
 let dirty = false
+
+/* ------------------------------------------------------------------ */
+/* Historique : instantanes du projet, pour annuler et refaire          */
+/* ------------------------------------------------------------------ */
+
+const undoStack: string[] = []
+const redoStack: string[] = []
+let snapTimer = 0
+let lastSnap = ''
+
+/** Empile l'etat d'avant la derniere salve de modifications. */
+function pushSnapshot() {
+  window.clearTimeout(snapTimer)
+  const cur = JSON.stringify(project)
+  if (cur === lastSnap) return
+  if (lastSnap) {
+    undoStack.push(lastSnap)
+    if (undoStack.length > 80) undoStack.shift()
+    redoStack.length = 0
+  }
+  lastSnap = cur
+}
+
+/** Remplace le projet sans reconstruire le contexte audio : le graphe
+    sait ajouter et retirer les channels a chaud. */
+function applyProject(p: Project) {
+  project = p
+  ctx.project = p
+  engine.project = p
+  if (!p.channels.find((c) => c.id === ctx.selected)) ctx.selected = p.channels[0]?.id ?? ''
+  engine.sync()
+  ctx.refresh('all')
+  ctx.selectChannel(ctx.selected)
+}
+
+function undo() {
+  pushSnapshot()
+  const prev = undoStack.pop()
+  if (!prev) { toast('Rien a annuler.'); return }
+  redoStack.push(JSON.stringify(project))
+  lastSnap = prev
+  applyProject(migrateProject(JSON.parse(prev) as Project))
+  dirty = true
+  toast(`Annule (${undoStack.length} etape${undoStack.length > 1 ? 's' : ''} restante${undoStack.length > 1 ? 's' : ''})`)
+}
+
+function redo() {
+  const next = redoStack.pop()
+  if (!next) { toast('Rien a retablir.'); return }
+  undoStack.push(JSON.stringify(project))
+  lastSnap = next
+  applyProject(migrateProject(JSON.parse(next) as Project))
+  dirty = true
+  toast('Retabli.')
+}
 
 const ctx: Ctx = {
   get project() { return project },
@@ -76,7 +135,13 @@ const ctx: Ctx = {
   say: (m) => viteau.say(m),
   dialog,
   offerRender: (buf, base, title) => audioResultDialog(buf, base, title),
-  markDirty() { dirty = true },
+  markDirty() {
+    dirty = true
+    // les instantanes sont regroupes : tourner un potard ne cree pas
+    // cinquante etapes d'annulation
+    window.clearTimeout(snapTimer)
+    snapTimer = window.setTimeout(pushSnapshot, 400)
+  },
 }
 
 /* ------------------------------------------------------------------ */
@@ -95,11 +160,82 @@ function loadLocal() {
   const raw = localStorage.getItem(SAVE_KEY)
   if (!raw) { toast('Aucun projet enregistre.'); return }
   try {
-    const p = JSON.parse(raw) as Project
+    const p = migrateProject(JSON.parse(raw) as Project)
     if (!p.channels?.length) throw new Error('vide')
     adoptProject(p)
     toast(`Projet "${p.name}" recharge.`)
   } catch { toast('Fichier de sauvegarde illisible.') }
+}
+
+/* ------------------------------------------------------------------ */
+/* Disposition des fenetres                                            */
+/* ------------------------------------------------------------------ */
+
+let layoutTimer = 0
+function saveLayout() {
+  window.clearTimeout(layoutTimer)
+  layoutTimer = window.setTimeout(() => {
+    const out: Record<string, unknown> = {}
+    for (const [id, w] of wins) out[id] = w.geometry()
+    try { localStorage.setItem(LAYOUT_KEY, JSON.stringify(out)) } catch { /* stockage plein */ }
+  }, 500)
+}
+
+function loadLayout() {
+  const raw = localStorage.getItem(LAYOUT_KEY)
+  if (!raw) return false
+  try {
+    const data = JSON.parse(raw) as Record<string, Partial<Geometry>>
+    for (const [id, g] of Object.entries(data)) wins.get(id)?.setGeometry(g)
+    return true
+  } catch { return false }
+}
+
+function cascade() {
+  const host = desktop.getBoundingClientRect()
+  const list = [...wins.values()].filter((w) => w.open)
+  list.forEach((w, i) => {
+    const x = 24 + i * 30, y = 12 + i * 28
+    w.place(x, y, Math.min(820, host.width - x - 24), Math.min(520, host.height - y - 24))
+  })
+  list.at(-1)?.focus()
+  saveLayout()
+}
+
+/** Range les fenetres ouvertes en grille, sans recouvrement. */
+function tile() {
+  const host = desktop.getBoundingClientRect()
+  const list = [...wins.values()].filter((w) => w.open && !w.el.classList.contains('minimized'))
+  if (!list.length) { toast('Aucune fenetre ouverte.'); return }
+  const cols = Math.ceil(Math.sqrt(list.length))
+  const rows = Math.ceil(list.length / cols)
+  const cw = Math.floor(host.width / cols), chh = Math.floor(host.height / rows)
+  list.forEach((w, i) => {
+    w.place((i % cols) * cw, Math.floor(i / cols) * chh, cw - 2, chh - 2)
+  })
+  saveLayout()
+}
+
+function defaultLayout() {
+  const host = desktop.getBoundingClientRect()
+  const fit = (x: number, y: number, w: number, hh: number) =>
+    [Math.min(x, Math.max(8, host.width - w - 8)), Math.min(y, Math.max(8, host.height - 60)),
+     Math.min(w, host.width - 16), Math.min(hh, host.height - 16)] as const
+  const set = (id: string, x: number, y: number, w: number, hh: number, open: boolean) => {
+    const win = wins.get(id)
+    if (!win) return
+    const [a, b, c, d] = fit(x, y, w, hh)
+    win.place(a, b, c, d)
+    if (!open) win.close()
+  }
+  set('rack', 106, 8, 680, 330, true)
+  set('playlist', 150, 348, 800, 290, true)
+  set('roll', 330, 210, 740, 410, false)
+  set('mixer', 790, 8, 620, 570, false)
+  set('channel', 170, 74, 800, 600, false)
+  set('browser', 120, 60, 390, 430, false)
+  set('nightcore', 190, 34, 890, 630, false)
+  saveLayout()
 }
 
 function adoptProject(p: Project) {
@@ -160,7 +296,7 @@ async function importProjectFile(file: File) {
       const buf = await actx.decodeAudioData(bin.buffer)
       idMap.set(s.id, samples.add(s.name, buf).id)
     }
-    const p = data.project as Project
+    const p = migrateProject(data.project as Project)
     for (const ch of p.channels) {
       if (ch.sampler?.sampleId) ch.sampler.sampleId = idMap.get(ch.sampler.sampleId) ?? null
     }
@@ -352,7 +488,7 @@ function buildUI() {
       id, title, icon,
       x: Math.min(x, Math.max(10, W - w - 10)), y: Math.min(y, Math.max(10, H - 80)),
       w: Math.min(w, W - 20), h: Math.min(hh, H - 10),
-      onResize,
+      onResize, onGeometry: saveLayout,
     }, desktop)
     win.body.appendChild(content)
     wins.set(id, win)
@@ -363,7 +499,7 @@ function buildUI() {
   mk('roll', 'Piano roll', 'piano', roll.el, 330, 210, 720, 400, () => roll.resize())
   mk('playlist', 'Playlist', 'playlist', playlist.el, 150, 344, 780, 292, () => playlist.resize())
   mk('mixer', 'Mixeur', 'mixer', mixer.el, 786, 8, 620, 560)
-  mk('channel', 'Reglages du channel', 'wrench', chEditor.el, 200, 88, 620, 470)
+  mk('channel', 'Instrument', 'wrench', chEditor.el, 170, 74, 780, 600)
   mk('browser', 'Navigateur de samples', 'folder', browser.el, 120, 60, 380, 420)
   mk('nightcore', 'Nightcorification', 'moon', nightcore.el, 190, 34, 880, 630, () => nightcore.refresh())
 
@@ -385,7 +521,7 @@ function buildUI() {
     { icon: 'piano', label: 'Piano roll', sub: 'les notes', onClick: () => wins.get('roll')!.restore() },
     { icon: 'playlist', label: 'Playlist', sub: 'arranger le morceau', onClick: () => wins.get('playlist')!.restore() },
     { icon: 'mixer', label: 'Mixeur & effets', onClick: () => wins.get('mixer')!.restore() },
-    { icon: 'wrench', label: 'Reglages du channel', onClick: () => wins.get('channel')!.restore() },
+    { icon: 'wrench', label: 'Instrument', sub: 'synthe, sampler, percussion', onClick: () => wins.get('channel')!.restore() },
     { icon: 'folder', label: 'Navigateur de samples', onClick: () => wins.get('browser')!.restore() },
     { sep: true, icon: '', label: '' },
     { icon: 'floppy', label: 'Enregistrer', sub: 'dans le navigateur', onClick: saveLocal },
@@ -399,17 +535,21 @@ function buildUI() {
         title: 'Nouveau projet', icon: 'newdoc',
         body: 'On efface tout et on recommence ? Le projet actuel sera perdu s\'il n\'est pas enregistre.',
         buttons: [
-          { label: 'Oui, tout casser', primary: true, onClick: () => { adoptProject(demoProject()); toast('Nouveau projet.') } },
+          { label: 'Oui, tout casser', primary: true, onClick: () => { adoptProject(emptyProject()); toast('Nouveau projet.') } },
           { label: 'Non' },
         ],
       })
     } },
     { icon: 'dice', label: 'Beat aleatoire', right: true, onClick: () => rack.randomize() },
+    { icon: 'playlist', label: 'Ranger les fenetres', sub: 'en grille', right: true, onClick: tile },
+    { icon: 'doc', label: 'Fenetres en cascade', right: true, onClick: cascade },
+    { icon: 'screen', label: 'Disposition d\'origine', right: true, onClick: defaultLayout },
     { icon: 'star', label: 'Viteau', sub: 'l\'assistant', right: true, onClick: () => {
       const on = viteau.toggle()
       toast(on ? 'Viteau active.' : 'Viteau baillonne.')
     } },
     { icon: 'sleep', label: 'Economiseur d\'ecran', right: true, onClick: () => saver.start() },
+    { icon: 'star', label: 'Premiers pas', right: true, onClick: showWelcome },
     { icon: 'keyboard', label: 'Raccourcis clavier', right: true, onClick: showHelp },
     { icon: 'help', label: 'A propos', right: true, onClick: showAbout },
   ]
@@ -463,7 +603,45 @@ function buildUI() {
 
   ctx.selectChannel(ctx.selected)
   transport.scope.analyser = engine.graph?.analyser ?? null
+  loadLayout()
+  lastSnap = JSON.stringify(project)
+  if (!localStorage.getItem(SEEN_KEY)) showWelcome()
   requestAnimationFrame(() => { transport.scope.resize(); roll.resize(); playlist.resize() })
+}
+
+/* ------------------------------------------------------------------ */
+/* Premiers pas — le projet demarre vide, il faut une porte d'entree    */
+/* ------------------------------------------------------------------ */
+
+let welcomeEl: HTMLElement | null = null
+
+function showWelcome() {
+  welcomeEl?.remove()
+  const step = (title: string, body: string, action?: { label: string; run: () => void }) =>
+    h('li', {},
+      h('b', {}, title),
+      h('span', {}, body),
+      action ? h('button', { class: 'btn tiny go', onclick: action.run }, action.label) : null)
+
+  welcomeEl = h('div', { id: 'welcome', role: 'complementary', 'aria-label': 'Premiers pas' },
+    h('div', { class: 'wc-head' },
+      icon('star', 16),
+      h('span', {}, 'PREMIERS PAS'),
+      h('button', {
+        class: 'wc-x', 'aria-label': 'Fermer', title: 'Fermer',
+        onclick: () => { welcomeEl?.remove(); welcomeEl = null; try { localStorage.setItem(SEEN_KEY, '1') } catch { /* rien */ } },
+      }, '✕')),
+    h('ol', {},
+      step('Pose un rythme', 'Clique les cases du Channel Rack. Chaque ligne est un instrument.',
+        { label: 'M\'en generer un', run: () => { wins.get('rack')!.restore(); rack.randomize() } }),
+      step('Ecoute', 'Barre ESPACE pour lancer et arreter le motif.'),
+      step('Change les sons', 'Ouvre l\'Instrument : le synthetiseur a 36 presets prets a l\'emploi.',
+        { label: 'Ouvrir le synthe', run: () => { const sy = project.channels.find((c) => c.type === 'synth'); if (sy) ctx.selectChannel(sy.id); wins.get('channel')!.restore() } }),
+      step('Arrange et exporte', 'Peins tes motifs dans la Playlist, puis EXPORTER en haut a droite.'),
+    ),
+    h('div', { class: 'wc-foot' }, 'Appuie sur ', h('kbd', {}, '?'), ' a tout moment pour la liste des raccourcis.'),
+  )
+  desktop.appendChild(welcomeEl)
 }
 
 /* ------------------------------------------------------------------ */
@@ -471,27 +649,56 @@ function buildUI() {
 /* ------------------------------------------------------------------ */
 
 function showHelp() {
-  const rows: [string, string][] = [
-    ['Espace / F5', 'Jouer ou arreter le motif'],
-    ['F6', 'Jouer ou arreter la chanson (playlist)'],
-    ['Echap', 'Tout arreter'],
-    ['Ctrl + S', 'Enregistrer dans le navigateur'],
-    ['Ctrl + R', 'Beat aleatoire'],
-    ['1 … 9', 'Selectionner le channel'],
-    ['Clic sur un pas', 'Poser / retirer une note'],
-    ['Clic droit sur un pas', 'Changer la velocite'],
-    ['Molette sur un potard', 'Reglage · maj = fin'],
-    ['Double-clic potard', 'Valeur par defaut'],
-    ['Ctrl + molette', 'Zoom (piano roll, playlist)'],
-    ['Alt + clic (forme d\'onde)', 'Poser une tranche'],
+  const groups: [string, [string, string][]][] = [
+    ['Transport', [
+      ['Espace / F5', 'Jouer ou arreter le motif'],
+      ['F6', 'Jouer ou arreter la chanson'],
+      ['Echap', 'Tout arreter (ou fermer la boite ouverte)'],
+    ]],
+    ['Edition', [
+      ['Ctrl + Z', 'Annuler'],
+      ['Ctrl + Maj + Z', 'Retablir'],
+      ['Ctrl + S', 'Enregistrer dans le navigateur'],
+      ['Ctrl + E', 'Exporter le morceau'],
+      ['Ctrl + D', 'Dupliquer le motif'],
+      ['Ctrl + R', 'Beat aleatoire'],
+    ]],
+    ['Fenetres', [
+      ['Alt + 1 … 7', 'Rack · Piano roll · Playlist · Mixeur · Instrument · Samples · Nightcore'],
+      ['F2', 'Ouvrir l\'instrument selectionne'],
+      ['Glisser vers un bord', 'Accrocher la fenetre a la moitie ou au quart'],
+      ['Double-clic sur le titre', 'Agrandir ou restaurer'],
+    ]],
+    ['Selection', [
+      ['1 … 9', 'Selectionner un channel'],
+      ['Tab / Maj + Tab', 'Channel suivant ou precedent'],
+      ['?', 'Afficher cette liste'],
+    ]],
+    ['Souris', [
+      ['Clic sur un pas', 'Poser ou retirer une note'],
+      ['Clic droit sur un pas', 'Changer la velocite'],
+      ['Molette sur un potard', 'Regler · Maj pour le mode fin'],
+      ['Double-clic sur un potard', 'Valeur par defaut'],
+      ['Ctrl + molette', 'Zoom (piano roll, playlist)'],
+      ['Alt + clic sur la forme d\'onde', 'Poser une tranche'],
+    ]],
+    ['Synthetiseur', [
+      ['A/Q S D F G H J K', 'Jouer les touches blanches'],
+      ['Z/W E T Y U', 'Jouer les touches noires'],
+      ['Fleches haut / bas', 'Changer d\'octave'],
+    ]],
   ]
-  dialog({
-    title: 'Raccourcis clavier', icon: 'keyboard',
-    body: h('table', { style: { borderCollapse: 'collapse', width: '100%' } },
-      ...rows.map(([k, v]) => h('tr', {},
-        h('td', { style: { padding: '3px 10px 3px 0', fontWeight: '700', whiteSpace: 'nowrap' } }, k),
-        h('td', { style: { padding: '3px 0' } }, v)))),
-  })
+  const body = h('div', { style: { display: 'grid', gap: '10px', maxHeight: '58vh', overflow: 'auto' } })
+  for (const [title, rows] of groups) {
+    body.append(
+      h('div', { style: { font: '700 10px/1.6 Tahoma, sans-serif', letterSpacing: '1.4px', color: '#2b4f8f', textTransform: 'uppercase' } }, title),
+      h('table', { style: { borderCollapse: 'collapse', width: '100%' } },
+        ...rows.map(([k, v]) => h('tr', {},
+          h('td', { style: { padding: '2px 12px 2px 0', fontWeight: '700', whiteSpace: 'nowrap', verticalAlign: 'top' } }, k),
+          h('td', { style: { padding: '2px 0' } }, v)))),
+    )
+  }
+  dialog({ title: 'Raccourcis clavier', icon: 'keyboard', body })
 }
 
 function showAbout() {
@@ -515,30 +722,84 @@ function showAbout() {
 /* Raccourcis clavier                                                  */
 /* ------------------------------------------------------------------ */
 
+/* ------------------------------------------------------------------ */
+/* Clavier                                                             */
+/* ------------------------------------------------------------------ */
+
+/** Fenetres accessibles par Alt + chiffre, dans l'ordre du menu. */
+const WIN_KEYS: [string, string][] = [
+  ['rack', 'Channel Rack'], ['roll', 'Piano roll'], ['playlist', 'Playlist'],
+  ['mixer', 'Mixeur'], ['channel', 'Instrument'], ['browser', 'Samples'],
+  ['nightcore', 'Nightcorification'],
+]
+
+function selectNeighbour(d: number) {
+  const i = project.channels.findIndex((c) => c.id === ctx.selected)
+  const n = project.channels.length
+  if (!n) return
+  const ch = project.channels[((i + d) % n + n) % n]
+  ctx.selectChannel(ch.id)
+  wins.get('rack')?.el.querySelector<HTMLElement>('.rack-row.sel')?.scrollIntoView({ block: 'nearest' })
+}
+
 function bindKeys() {
   window.addEventListener('keydown', (e) => {
     const t = e.target as HTMLElement
-    if (t && /INPUT|TEXTAREA|SELECT/.test(t.tagName)) return
+    const typing = t && /INPUT|TEXTAREA|SELECT/.test(t.tagName)
     const k = e.key
+    const mod = e.ctrlKey || e.metaKey
 
+    // Echap ferme d'abord ce qui est ouvert par-dessus
+    if (k === 'Escape') {
+      const modal = document.getElementById('modal-layer')
+      if (modal?.classList.contains('on')) { closeDialog(); return }
+      if (!typing) { engine.stop(); return }
+    }
+    if (typing) return
+
+    /* --- fenetres : Alt + chiffre --- */
+    if (e.altKey && /^[1-7]$/.test(k)) {
+      e.preventDefault()
+      const [id] = WIN_KEYS[Number(k) - 1]
+      wins.get(id)?.toggle()
+      return
+    }
+
+    /* --- edition --- */
+    if (mod && k.toLowerCase() === 'z') {
+      e.preventDefault()
+      if (e.shiftKey) redo(); else undo()
+      return
+    }
+    if (mod && k.toLowerCase() === 'y') { e.preventDefault(); redo(); return }
+    if (mod && k.toLowerCase() === 's') { e.preventDefault(); saveLocal(); return }
+    if (mod && k.toLowerCase() === 'r') { e.preventDefault(); rack.randomize(); return }
+    if (mod && k.toLowerCase() === 'e') { e.preventDefault(); exportDialog(); return }
+    if (mod && k.toLowerCase() === 'd') { e.preventDefault(); playlist.clonePattern(); return }
+
+    /* --- transport --- */
     if (k === ' ' || k === 'F5') {
       e.preventDefault()
       if (engine.playing && engine.mode === 'pattern') engine.stop()
       else { engine.stop(); void engine.play('pattern'); viteau.playQuip() }
-    } else if (k === 'F6') {
+      return
+    }
+    if (k === 'F6') {
       e.preventDefault()
       if (engine.playing && engine.mode === 'song') engine.stop()
       else { engine.stop(); void engine.play('song') }
-    } else if (k === 'Escape') {
-      engine.stop()
-    } else if ((e.ctrlKey || e.metaKey) && k.toLowerCase() === 's') {
-      e.preventDefault(); saveLocal()
-    } else if ((e.ctrlKey || e.metaKey) && k.toLowerCase() === 'r') {
-      e.preventDefault(); rack.randomize()
-    } else if (/^[1-9]$/.test(k)) {
+      return
+    }
+
+    /* --- navigation --- */
+    if (k === 'Tab') { e.preventDefault(); selectNeighbour(e.shiftKey ? -1 : 1); return }
+    if (/^[1-9]$/.test(k)) {
       const ch = project.channels[Number(k) - 1]
       if (ch) ctx.selectChannel(ch.id)
+      return
     }
+    if (k === '?' || (k === '/' && e.shiftKey)) { e.preventDefault(); showHelp(); return }
+    if (k === 'F2') { e.preventDefault(); wins.get('channel')?.restore(); return }
   })
 
   window.addEventListener('beforeunload', (e) => {
@@ -547,7 +808,7 @@ function bindKeys() {
     e.returnValue = ''
   })
 
-  // Glisser-deposer d'un fichier n'importe ou sur le bureau
+  /* --- glisser-deposer sur tout le bureau --- */
   const stop = (e: Event) => { e.preventDefault(); e.stopPropagation() }
   for (const t of ['dragenter', 'dragover', 'drop']) document.addEventListener(t, stop)
   document.addEventListener('drop', (e) => {
@@ -555,7 +816,6 @@ function bindKeys() {
     if (!files.length) return
     const proj = files.find((f) => /\.(vidaw|json)$/i.test(f.name))
     if (proj) { void importProjectFile(proj); return }
-    // Un seul morceau depose : il y a deux destinations plausibles, on demande.
     if (files.length === 1) {
       dialog({
         title: 'On en fait quoi ?', icon: 'moon',
@@ -578,10 +838,14 @@ function bindKeys() {
     void browser.importFiles(files)
   })
 
+  let resizeTimer = 0
   window.addEventListener('resize', () => {
-    transport.scope.resize()
-    roll.resize()
-    playlist.resize()
+    window.clearTimeout(resizeTimer)
+    resizeTimer = window.setTimeout(() => {
+      transport.scope.resize()
+      roll.resize()
+      playlist.resize()
+    }, 120)
   })
 }
 
@@ -589,9 +853,29 @@ function bindKeys() {
 /* Boucle d'animation                                                  */
 /* ------------------------------------------------------------------ */
 
+/** Une fenetre masquee ne merite pas qu'on redessine son canevas. */
+const shown = (id: string) => {
+  const w = wins.get(id)
+  return !!w?.open && !w.el.classList.contains('minimized')
+}
+
+let lastStep = -2
 function loop() {
   transport.scope.draw()
-  if (wins.get('mixer')?.open) mixer.tick()
+  if (shown('mixer')) mixer.tick()
+
+  // La tete de lecture se deduit de l'horloge audio : pas de timer par pas,
+  // et le trait avance a la frequence de l'ecran plutot que par a-coups.
+  const s = engine.uiStep
+  if (s !== lastStep) {
+    lastStep = s
+    const pat = engine.mode === 'pattern' ? s : -1
+    const song = engine.mode === 'song' ? s : -1
+    if (shown('rack')) rack.setPlayhead(pat)
+    if (shown('roll')) roll.setPlayhead(pat)
+    if (shown('playlist')) playlist.setPlayhead(song)
+    transport.setPosition(Math.max(0, s))
+  }
   requestAnimationFrame(loop)
 }
 
@@ -649,12 +933,6 @@ buildUI()
 bindKeys()
 loop()
 
-engine.onStep = (s) => {
-  rack.setPlayhead(engine.mode === 'pattern' ? s : -1)
-  roll.setPlayhead(engine.mode === 'pattern' ? s : -1)
-  playlist.setPlayhead(engine.mode === 'song' ? s : -1)
-  transport.setPosition(Math.max(0, s))
-}
 engine.onState = () => transport.paint()
 engine.onError = (m) => toast(m)
 

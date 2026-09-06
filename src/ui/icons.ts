@@ -123,6 +123,16 @@ const SHAPES: Record<string, string> = {
     <path d="M8 9.6 v4.6" stroke="${INK}" stroke-width="1.6" stroke-linecap="round"/>`,
   sleep: `<path d="M2.5 3.5 h5 l-5 5 h5" fill="none" stroke="${BLUE_L}" stroke-width="1.6" stroke-linejoin="round"/>
     <path d="M9 8 h4.5 l-4.5 4.5 h4.5" fill="none" stroke="${BLUE}" stroke-width="1.6" stroke-linejoin="round"/>`,
+
+  /* ---- formes d'onde, pour le synthetiseur ---- */
+  wsaw: `<path d="M1 12 L6 4 L6 12 L11 4 L11 12 L15 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>`,
+  wsquare: `<path d="M1 12 V4 h4.5 V12 h4.5 V4 H15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>`,
+  wpulse: `<path d="M1 12 V4 h2.4 V12 h6 V4 h2.4 V12 H15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>`,
+  wtri: `<path d="M1 12 L4.5 4 L8 12 L11.5 4 L15 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>`,
+  wsine: `<path d="M1 8 q2 -5 3.5 0 t3.5 0 t3.5 0 t3.5 0" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>`,
+  wnoise: `<path d="M1 8 L2.4 4.5 L3.4 11 L4.6 6 L5.8 12 L7 5 L8.2 10 L9.4 4 L10.6 11.5 L11.8 6.5 L13 10 L14.2 5.5 L15 8" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"/>`,
+  wsh: `<path d="M1 10 h2.6 V5 h2.6 V11.5 h2.6 V7 h2.6 V4 H15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>`,
+  wramp: `<path d="M1.5 12 L7 4 L7 12 L12.5 4 L12.5 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>`,
 }
 
 export type IconName = keyof typeof SHAPES | string

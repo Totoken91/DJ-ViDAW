@@ -76,7 +76,8 @@ export class Playlist {
     c.markDirty(); c.refresh('all')
   }
 
-  private clonePattern() {
+  /** Duplique le motif courant. Accessible par Ctrl+D. */
+  clonePattern() {
     const c = this.ctx
     const src = c.project.patterns.find((p) => p.id === c.project.currentPattern)
     if (!src) return

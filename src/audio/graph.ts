@@ -7,11 +7,16 @@
 import type { Project, Channel } from '../core/state'
 import { clamp } from '../core/state'
 import { buildFx, type FxNode } from './fx'
+import { buildSynthFx, type SynthFxChain } from './synth'
 
 export interface ChannelStrip {
   input: GainNode
   gain: GainNode
   pan: StereoPannerNode | null
+  /** Dernier noeud avant l'insert : sert au reroutage a chaud. */
+  tail: AudioNode
+  /** Effets integres au preset, pour les channels synthetiseur. */
+  fx: SynthFxChain | null
   insert: number
 }
 
@@ -101,9 +106,16 @@ export function buildGraph(ctx: BaseAudioContext, p: Project, withAnalysers: boo
     const gain = ctx.createGain()
     const pan = pannerOrNull(ctx)
     input.connect(gain)
-    const dest = inserts[clamp(ch.insert, 0, inserts.length - 1)].input
-    if (pan) gain.connect(pan).connect(dest); else gain.connect(dest)
-    channels.set(ch.id, { input, gain, pan, insert: ch.insert })
+    let node: AudioNode = gain
+    let fx: SynthFxChain | null = null
+    if (ch.type === 'synth' && ch.synth) {
+      fx = buildSynthFx(ctx, ch.synth.fx, p.bpm)
+      gain.connect(fx.input)
+      node = fx.output
+    }
+    if (pan) { node.connect(pan); node = pan }
+    node.connect(inserts[clamp(ch.insert, 0, inserts.length - 1)].input)
+    channels.set(ch.id, { input, gain, pan, tail: node, fx, insert: ch.insert })
   }
   p.channels.forEach(wireChannel)
 
@@ -119,7 +131,8 @@ export function buildGraph(ctx: BaseAudioContext, p: Project, withAnalysers: boo
       for (const id of [...channels.keys()]) {
         if (!pr.channels.find((c) => c.id === id)) {
           const s = channels.get(id)!
-          try { s.input.disconnect(); s.gain.disconnect(); s.pan?.disconnect() } catch { /* rien */ }
+          s.fx?.stop()
+          try { s.input.disconnect(); s.gain.disconnect(); s.pan?.disconnect(); s.tail.disconnect() } catch { /* rien */ }
           channels.delete(id)
         }
       }
@@ -127,11 +140,11 @@ export function buildGraph(ctx: BaseAudioContext, p: Project, withAnalysers: boo
         const s = channels.get(ch.id)
         if (!s) continue
         if (s.insert !== ch.insert) {
-          try { (s.pan ?? s.gain).disconnect() } catch { /* rien */ }
-          const dest = inserts[clamp(ch.insert, 0, inserts.length - 1)].input
-          ;(s.pan ?? s.gain).connect(dest)
+          try { s.tail.disconnect() } catch { /* rien */ }
+          s.tail.connect(inserts[clamp(ch.insert, 0, inserts.length - 1)].input)
           s.insert = ch.insert
         }
+        if (s.fx && ch.synth) s.fx.update(ch.synth.fx, pr.bpm)
         const audible = ch.mute ? 0 : (anySolo && !ch.solo ? 0 : ch.vol)
         s.gain.gain.value = audible
         if (s.pan) s.pan.pan.value = clamp(ch.pan, -1, 1)
@@ -157,6 +170,7 @@ export function buildGraph(ctx: BaseAudioContext, p: Project, withAnalysers: boo
     },
 
     dispose() {
+      channels.forEach((s) => s.fx?.stop())
       inserts.forEach((s) => s.chain.forEach((f) => f.dispose?.()))
       try { master.disconnect(); limiter.disconnect(); postMaster.disconnect() } catch { /* rien */ }
     },

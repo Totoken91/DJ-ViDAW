@@ -6,8 +6,9 @@
    au bounce d'etre bit-a-bit identique a ce qu'on entend.
    ============================================================ */
 
-import type { Channel, DrumParams, SamplerParams, SynthParams, Note } from '../core/state'
+import type { Channel, DrumParams, SamplerParams, Note } from '../core/state'
 import { midiToRate, clamp } from '../core/state'
+import { playSynthVoice } from './synth'
 
 const ROOT = 60 // C5 dans notre convention
 
@@ -274,87 +275,6 @@ function reversed(ctx: BaseAudioContext, buf: AudioBuffer, id: string): AudioBuf
 export function clearReverseCache() { revCache.clear() }
 
 /* ------------------------------------------------------------------ */
-/* SYNTHE SOUSTRACTIF                                                  */
-/* ------------------------------------------------------------------ */
-
-export function playSynth(
-  ctx: BaseAudioContext, dest: AudioNode, sp: SynthParams,
-  note: Note, time: number, vel: number, pitchOffset: number, stepDur: number,
-): void {
-  const freq = 440 * midiToRate(note.key + pitchOffset - 69)
-  const noteDur = Math.max(0.03, note.len * stepDur)
-  const rel = Math.max(0.01, sp.release)
-  const end = time + noteDur + rel
-
-  const amp = ctx.createGain()
-  amp.gain.value = 0
-  const filt = ctx.createBiquadFilter()
-  filt.type = 'lowpass'
-  filt.Q.value = sp.reso
-  amp.connect(dest)
-  filt.connect(amp)
-
-  // Enveloppe d'amplitude ADSR
-  const a = Math.max(0.0008, sp.attack)
-  const d = Math.max(0.005, sp.decay)
-  const s = clamp(sp.sustain, 0, 1)
-  amp.gain.setValueAtTime(0, time)
-  amp.gain.linearRampToValueAtTime(vel, time + a)
-  amp.gain.setTargetAtTime(vel * s, time + a, d / 3)
-  amp.gain.setValueAtTime(Math.max(0.0001, vel * s), time + noteDur)
-  amp.gain.linearRampToValueAtTime(0.0001, end)
-
-  // Enveloppe de filtre
-  const base = clamp(sp.cutoff, 30, 18000)
-  const peak = clamp(base * (1 + sp.envAmt * 14), 30, 19000)
-  filt.frequency.setValueAtTime(base, time)
-  filt.frequency.linearRampToValueAtTime(peak, time + Math.max(0.001, sp.fAttack))
-  filt.frequency.setTargetAtTime(base, time + sp.fAttack, Math.max(0.01, sp.fDecay) / 3)
-
-  const voices = clamp(Math.round(sp.unison), 1, 5)
-  const mkOsc = (shape: OscShape2, detCents: number, gain: number, pan: number, oct = 0) => {
-    if (gain <= 0.0001) return
-    let node: AudioNode
-    if (shape === 'noise') {
-      const n = ctx.createBufferSource()
-      n.buffer = noiseBuffer(ctx); n.loop = true
-      n.start(time, Math.random()); n.stop(end + 0.02)
-      node = n
-    } else {
-      const o = ctx.createOscillator()
-      o.type = shape === 'saw' ? 'sawtooth' : shape
-      o.frequency.value = freq * Math.pow(2, oct)
-      o.detune.value = detCents
-      if (sp.glide > 0) {
-        o.frequency.setValueAtTime(freq * Math.pow(2, oct) * 0.5, time)
-        o.frequency.exponentialRampToValueAtTime(freq * Math.pow(2, oct), time + sp.glide)
-      }
-      o.start(time); o.stop(end + 0.02)
-      node = o
-    }
-    const g = ctx.createGain(); g.gain.value = gain
-    if (pan !== 0 && typeof ctx.createStereoPanner === 'function') {
-      const p = ctx.createStereoPanner(); p.pan.value = clamp(pan, -1, 1)
-      node.connect(g).connect(p).connect(filt)
-    } else {
-      node.connect(g).connect(filt)
-    }
-  }
-
-  const lvl1 = (1 - sp.mix) / voices, lvl2 = sp.mix / voices
-  for (let i = 0; i < voices; i++) {
-    const spread = voices === 1 ? 0 : (i / (voices - 1)) * 2 - 1
-    const det = spread * sp.detune
-    const pan = spread * sp.spread
-    mkOsc(sp.osc1 as OscShape2, det, lvl1 * 0.5, pan)
-    mkOsc(sp.osc2 as OscShape2, -det * 0.7 + 3, lvl2 * 0.5, -pan)
-  }
-  if (sp.sub > 0) mkOsc('sine', 0, sp.sub * 0.45, 0, -1)
-}
-
-type OscShape2 = 'saw' | 'square' | 'sine' | 'triangle' | 'noise'
-
-/* ------------------------------------------------------------------ */
 /* Aiguillage                                                          */
 /* ------------------------------------------------------------------ */
 
@@ -368,6 +288,8 @@ export function triggerNote(
   } else if (ch.type === 'sampler' && ch.sampler) {
     playSample(ctx, dest, ch.sampler, bank, note, time, vel, ch.pitch, bpm, stepDur)
   } else if (ch.type === 'synth' && ch.synth) {
-    playSynth(ctx, dest, ch.synth, note, time, vel, ch.pitch, stepDur)
+    const freq = 440 * Math.pow(2, (note.key + ch.pitch - 69) / 12)
+    playSynthVoice(ctx, dest, ch.synth, freq, note.key + ch.pitch, time,
+      Math.max(0.03, note.len * stepDur), vel, bpm)
   }
 }

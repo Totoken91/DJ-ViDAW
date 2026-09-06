@@ -43,7 +43,7 @@ construction. Le résultat est un dossier statique de ~150 Ko.
 |---|---|
 | **Transport** | Scheduler à fenêtre glissante : un timer imprécis place les événements sur l'horloge audio, qui elle ne dérive pas. Swing sur les doubles-croches impaires. |
 | **Percussions** | 10 modèles entièrement synthétisés (kick, snare, clap, hat, open hat, tom, rim, cowbell, crash, zap) avec tune / decay / tone / snap / drive. |
-| **Synthé** | Soustractif : 2 oscillateurs (scie, carré, sinus, triangle, bruit), unison jusqu'à 5 voix avec détune et largeur stéréo, sous-octave, filtre résonant à enveloppe, ADSR, glide. 6 presets. |
+| **Synthé** | Voir la section dédiée ci-dessous. |
 | **Sampler** | Import par glisser-déposer, fenêtre début/fin, lecture inversée, boucle, calage au tempo, découpe en tranches (manuelle, en 4/8/16, ou par détection de transitoires), note de base pour jouer le sample au piano roll. |
 | **Effets** | 9 unités, 6 par insert : filtre à LFO, delay ping-pong synchronisé, réverbe à convolution (impulsion générée), bitcrusher (AudioWorklet), distorsion à repli, chorus, phaser, EQ 3 bandes, compresseur, trance gate. |
 | **Mixeur** | 9 inserts + master, routage libre des channels, pan, vu-mètres, limiteur de sortie. |
@@ -53,6 +53,36 @@ Le point clé de l'architecture : le graphe audio et les voix sont écrits contr
 `BaseAudioContext`, jamais contre `AudioContext`. Le même code sert donc à la
 lecture temps réel et au bounce hors-ligne — pas de second moteur à maintenir,
 pas de divergence entre l'écoute et le fichier exporté.
+
+### Le synthétiseur
+
+Un vrai instrument, pas une case à cocher. Chaque voix se construit à la volée
+dans le graphe audio, et le même code sert à l'écoute et au rendu hors-ligne.
+
+- **Deux oscillateurs** indépendants : six formes d'onde (dent de scie, carré,
+  impulsion à largeur réglable, triangle, sinus, bruit), octave, demi-tons,
+  accord fin, niveau, et **unisson jusqu'à 7 voix** par oscillateur avec
+  désaccord, dérive analogique et étalement stéréo.
+- **Sous-octave** (sinus, triangle ou carré), générateur de **bruit**, et
+  **modulation en anneau** entre les deux oscillateurs.
+- **Filtre** passe-bas 12 ou 24 dB, passe-haut, passe-bande, coupe-bande, avec
+  résonance, saturation en entrée, suivi de clavier et enveloppe dédiée. Sa
+  réponse est tracée en direct dans le panneau.
+- **Deux enveloppes** ADSR (amplitude et filtre), dessinées elles aussi.
+- **Deux LFO** — sinus, triangle, rampe, carré, échantillonneur-bloqueur — en
+  Hz libre ou synchronisés au tempo, avec montée progressive et quatre
+  destinations chacun : hauteur, filtre, volume, panoramique.
+- **Effets intégrés au preset** : saturation, chorus, écho synchronisé et
+  réverbe à convolution, montés une fois par channel. C'est ce qui fait qu'un
+  preset sonne dès qu'on le charge au lieu de sonner sec.
+- **36 presets** répartis en huit familles : basses, leads, plucks, nappes,
+  claviers, cloches, arpèges, effets.
+- **Clavier jouable** à la souris et au clavier d'ordinateur (`A/Q S D F G H J K`
+  pour les blanches, `Z/W E T Y U` pour les noires), compatible AZERTY et QWERTY.
+
+L'impulsion à largeur variable passe par des tables de Fourier pré-calculées
+(Web Audio n'a pas de PWM natif), et la modulation en anneau exploite la
+modulation d'un `GainNode` à la fréquence audio.
 
 ### Le mode Nightcorification
 
@@ -79,6 +109,31 @@ tel dans l'interface plutôt que caché.
 - **Sorties** : export audio par rendu hors-ligne (même chaîne, donc identique à
   l'écoute), ou envoi direct comme channel sampler pour le découper dans le
   séquenceur.
+
+### Confort d'usage
+
+- **Démarrage sur un projet vierge** : le rack est prêt, aucune note n'est
+  posée. Un panneau « Premiers pas » donne les quatre gestes qui comptent, et
+  le bouton HASARD génère un rythme si on veut juste entendre quelque chose.
+- **Annuler / rétablir** (`Ctrl+Z`, `Ctrl+Maj+Z`) sur tout le projet. Les
+  modifications rapprochées sont groupées : tourner un potard ne crée pas
+  cinquante étapes.
+- **Accrochage des fenêtres** : glisser vers un bord les place en moitié, vers
+  un coin en quart, vers le haut en plein écran, avec un aperçu pendant le
+  geste. `Ranger les fenêtres` les dispose en grille, `Cascade` les empile.
+- **La disposition est mémorisée** entre les sessions.
+- `Alt+1` à `Alt+7` ouvrent et ferment chaque fenêtre, `Tab` passe au channel
+  suivant, `?` affiche la liste complète des raccourcis.
+- Le focus clavier est visible partout, et les animations s'effacent sous
+  `prefers-reduced-motion`.
+
+### Fluidité
+
+La tête de lecture ne dépend plus d'un `setTimeout` par pas : elle se déduit de
+l'horloge audio à chaque image, ce qui la rend exacte et supprime des centaines
+de timers par minute. Les canevas du piano roll et de la playlist ne sont
+redessinés que si leur fenêtre est réellement visible, et le redimensionnement
+est temporisé.
 
 ### L'interface
 
@@ -134,7 +189,12 @@ anneau de sites — ce qu'on collait vraiment en bas d'une page en 2001.
 | Molette sur un potard | Réglage · `Maj` pour le mode fin |
 | Double-clic sur un potard | Valeur par défaut |
 | `Ctrl`+molette | Zoom (piano roll, playlist) |
+| `Ctrl + Z` / `Ctrl + Maj + Z` | Annuler / rétablir |
+| `Alt + 1` … `Alt + 7` | Ouvrir ou fermer une fenêtre |
+| `Tab` / `Maj + Tab` | Channel suivant / précédent |
+| `?` | La liste complète, dans l'application |
 | `Alt`+clic sur la forme d'onde | Poser une tranche |
+| `A/Q S D F G H J K` | Jouer le synthé au clavier |
 
 Dans la Nightcorification : clic sur la forme d'onde pour se placer, glisser
 pour tracer une boucle, clic droit pour l'enlever.
@@ -180,6 +240,8 @@ src/
 ├─ core/state.ts        modèle de projet, presets, définitions des effets
 ├─ audio/
 │  ├─ voices.ts         synthèse des percussions, sampler, synthé
+│  ├─ synth.ts          le synthétiseur : voix, filtre, LFO, effets
+│  ├─ presets.ts        les 36 presets
 │  ├─ nightcore.ts      chaîne nightcore, étirement temporel, rendu
 │  ├─ fx.ts             les 9 effets, en fabriques reconstructibles
 │  ├─ graph.ts          câblage channels → inserts → master
@@ -189,9 +251,11 @@ src/
 ├─ worklets/            bitcrusher et tap d'enregistrement (JS pur)
 ├─ ui/                  fenêtres, séquenceur, piano roll, playlist, mixeur…
 │  ├─ icons.ts          le jeu d'icônes et la mascotte, en SVG
+│  ├─ synth.ts          la face avant du synthétiseur
+│  ├─ wallpaper.ts      le paysage calculé
 │  └─ nightcore.ts      l'applet Nightcorification
 └─ styles/              xp.css (Luna) · daw.css (FL) · goofy.css (Y2K)
-                        nightcore.css (l'applet)
+                        nightcore.css · synth.css
 ```
 
 ---

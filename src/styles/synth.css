@@ -1,0 +1,147 @@
+/* ============================================================
+   DJ ViDAW — FACE AVANT DU SYNTHETISEUR
+   Metal bleute, serigraphie gravee, afficheurs ambres. Un
+   instrument doit ressembler a un instrument, pas a un formulaire.
+   ============================================================ */
+
+.syn {
+  --syn-panel: #2f3646;
+  --syn-panel-2: #262c39;
+  --syn-line: #171c26;
+  --syn-edge: rgba(255,255,255,.10);
+  --syn-text: #ccd6e6;
+  --syn-dim: #7f8ca3;
+  --syn-amber: #ffbe4d;
+  display: flex; flex-direction: column; height: 100%;
+  color: var(--syn-text);
+  background: linear-gradient(180deg, #333b4c, #232936 60%, #1c212c);
+}
+.syn-scroll { flex: 1 1 auto; overflow: auto; padding: 8px; display: flex; flex-direction: column; gap: 8px; }
+
+/* ---------- navigateur de presets ---------- */
+.syn-browser {
+  display: flex; align-items: stretch; gap: 6px; flex-wrap: wrap;
+  padding: 6px 8px;
+  background: linear-gradient(180deg, #414a5e, #2b313f);
+  border: 1px solid var(--syn-line); border-radius: 5px;
+  box-shadow: inset 0 1px 0 var(--syn-edge);
+}
+.syn-lcd {
+  flex: 1 1 200px; min-width: 180px;
+  display: flex; flex-direction: column; justify-content: center;
+  padding: 5px 10px;
+  background: #17120a; border: 1px solid #0b0805; border-radius: 3px;
+  box-shadow: inset 0 0 12px rgba(255,180,60,.22), inset 1px 1px 4px rgba(0,0,0,.9);
+}
+.syn-lcd b {
+  font: 700 15px/1.2 "Courier New", monospace; letter-spacing: 1px;
+  color: #ffbe4d; text-shadow: 0 0 8px rgba(255,190,77,.75);
+}
+.syn-lcd i {
+  font: 400 9px/1.4 "Courier New", monospace; font-style: normal;
+  color: #a37536; letter-spacing: .5px;
+}
+.syn-fams { display: flex; flex-wrap: wrap; gap: 3px; }
+.syn-fam {
+  padding: 3px 7px; cursor: pointer;
+  font: 700 9px/1.4 Tahoma, "DejaVu Sans", Verdana, sans-serif; letter-spacing: .6px;
+  color: var(--syn-dim); background: #232936;
+  border: 1px solid var(--syn-line); border-radius: 3px;
+}
+.syn-fam:hover { color: #fff; }
+.syn-fam.on { background: linear-gradient(180deg, #5d6b88, #3c465b); color: #ffd489; }
+.syn-list {
+  max-height: 96px; overflow: auto; flex: 1 1 190px; min-width: 170px;
+  background: #1b202a; border: 1px solid var(--syn-line); border-radius: 3px;
+}
+.syn-item {
+  padding: 3px 8px; cursor: pointer;
+  font: 700 10px/1.5 Tahoma, "DejaVu Sans", Verdana, sans-serif; color: var(--syn-text);
+  border-bottom: 1px solid rgba(255,255,255,.04);
+}
+.syn-item:hover { background: #2c3444; }
+.syn-item.on { background: linear-gradient(90deg, #6b4a12, #3a2a0c); color: #ffd489; }
+
+/* ---------- sections ---------- */
+.syn-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: stretch; }
+.syn-sec {
+  flex: 1 1 auto;
+  background: linear-gradient(180deg, var(--syn-panel), var(--syn-panel-2));
+  border: 1px solid var(--syn-line); border-radius: 5px;
+  box-shadow: inset 0 1px 0 var(--syn-edge);
+  display: flex; flex-direction: column;
+}
+.syn-sec > h4 {
+  margin: 0; padding: 3px 9px;
+  font: 700 9px/1.7 Tahoma, "DejaVu Sans", Verdana, sans-serif;
+  letter-spacing: 1.8px; text-transform: uppercase; color: #93a2ba;
+  background: linear-gradient(180deg, rgba(255,255,255,.07), transparent);
+  border-bottom: 1px solid var(--syn-line);
+  display: flex; align-items: center; gap: 8px;
+}
+.syn-sec > h4 .sub { letter-spacing: .4px; color: var(--syn-dim); font-weight: 400; text-transform: none; }
+.syn-body { display: flex; flex-wrap: wrap; gap: 7px; padding: 7px 9px 10px; align-items: flex-start; }
+.syn-col { display: flex; flex-direction: column; gap: 5px; }
+
+.syn .knob-label { color: #92a1b8; }
+.syn .knob-val { color: #ffbe4d; }
+
+/* ---------- selecteurs de forme d'onde ---------- */
+.syn-waves { display: flex; gap: 2px; flex-wrap: wrap; }
+.syn-wave {
+  width: 26px; height: 22px; display: grid; place-items: center; cursor: pointer;
+  color: #8e9cb3; background: #1e2431;
+  border: 1px solid var(--syn-line); border-radius: 3px;
+}
+.syn-wave:hover { color: #fff; }
+.syn-wave.on { color: #101720; background: linear-gradient(180deg, #ffd489, #d99a2b); }
+
+.syn-pick {
+  font: 700 9px/1 Tahoma, "DejaVu Sans", Verdana, sans-serif;
+  color: var(--syn-text); background: #1e2431;
+  border: 1px solid var(--syn-line); border-radius: 3px;
+  padding: 4px 5px; cursor: pointer;
+}
+.syn-toggle {
+  display: inline-flex; align-items: center; gap: 5px; cursor: pointer;
+  font: 700 9px/1 Tahoma, "DejaVu Sans", Verdana, sans-serif; color: #a9b6cb;
+  padding: 4px 7px; background: #1e2431;
+  border: 1px solid var(--syn-line); border-radius: 3px;
+}
+.syn-toggle.on { background: linear-gradient(180deg, #3f7a4e, #235235); color: #d6ffe2; }
+
+/* ---------- courbes ---------- */
+.syn-curve {
+  display: block; border: 1px solid var(--syn-line); border-radius: 3px;
+  background: #14181f;
+}
+
+/* ---------- clavier ---------- */
+.syn-keys {
+  position: relative; height: 74px; flex: 0 0 auto; margin: 0 8px 8px;
+  border: 1px solid var(--syn-line); border-radius: 4px; overflow: hidden;
+  background: #0f131a; touch-action: none; user-select: none;
+}
+.syn-key {
+  position: absolute; top: 0; bottom: 0;
+  border-right: 1px solid #8f97a6;
+  background: linear-gradient(180deg, #fdfdfd 0 78%, #dcdfe6 100%);
+}
+.syn-key.black {
+  top: 0; height: 62%; border: 1px solid #05070b; border-radius: 0 0 2px 2px;
+  background: linear-gradient(180deg, #3a4150 0 70%, #10141c 100%);
+  z-index: 2;
+}
+.syn-key.on { background: linear-gradient(180deg, #ffd489 0 70%, #d99a2b 100%); }
+.syn-key.black.on { background: linear-gradient(180deg, #ffbe4d 0 70%, #a86f10 100%); }
+.syn-key .lbl {
+  position: absolute; bottom: 3px; left: 0; right: 0; text-align: center;
+  font: 700 8px/1 Tahoma, "DejaVu Sans", Verdana, sans-serif; color: #7b8698; pointer-events: none;
+}
+.syn-key.black .lbl { color: #96a2b6; }
+.syn-kbbar {
+  display: flex; align-items: center; gap: 6px; padding: 0 8px 6px;
+  font: 400 9px/1.5 Tahoma, "DejaVu Sans", Verdana, sans-serif; color: var(--syn-dim);
+}
+
+.syn-kbhost { flex: 0 0 auto; }

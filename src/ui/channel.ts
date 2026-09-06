@@ -8,21 +8,25 @@ import { h, clear, drag } from './dom'
 import { icon } from './icons'
 import { knob } from './knob'
 import type { Ctx } from './ctx'
-import type { Channel, OscShape } from '../core/state'
+import type { Channel } from '../core/state'
 import { clamp, defaultDrum, keyName, uid, patternSteps, DRUM_KINDS } from '../core/state'
 import { detectSlices, guessBpm } from '../audio/samples'
+import { SynthPanel } from './synth'
 
-const SHAPES: OscShape[] = ['saw', 'square', 'sine', 'triangle', 'noise']
-const SHAPE_LABEL: Record<OscShape, string> = { saw: 'SCIE', square: 'CARRE', sine: 'SINUS', triangle: 'TRIANGLE', noise: 'BRUIT' }
 
 export class ChannelEditor {
   el: HTMLElement
   private body: HTMLElement
   private waveCv: HTMLCanvasElement | null = null
+  private synth: SynthPanel | null = null
   chId = ''
 
   constructor(private ctx: Ctx) {
-    this.body = h('div', { style: { flex: '1 1 auto', overflow: 'auto', padding: '8px' } })
+    // colonne flex : l'en-tete garde sa taille, le panneau prend le reste et
+    // gere son propre defilement (le synthetiseur a un clavier a garder visible)
+    this.body = h('div', {
+      style: { flex: '1 1 auto', minHeight: '0', display: 'flex', flexDirection: 'column', overflow: 'hidden' },
+    })
     this.el = h('div', { class: 'rack' }, this.body)
   }
 
@@ -35,10 +39,21 @@ export class ChannelEditor {
     if (!ch) { this.body.appendChild(h('div', { class: 'hint' }, 'Aucun channel selectionne.')); return }
     this.chId = ch.id
 
-    this.body.appendChild(this.header(ch))
-    if (ch.type === 'drum') this.body.appendChild(this.drumPanel(ch))
-    else if (ch.type === 'sampler') this.body.appendChild(this.samplerPanel(ch))
-    else this.body.appendChild(this.synthPanel(ch))
+    const head = this.header(ch)
+    head.style.flex = '0 0 auto'
+    head.style.margin = '8px 8px 0'
+    this.body.appendChild(head)
+
+    if (ch.type === 'synth') {
+      const panel = this.synthPanel(ch)
+      panel.style.flex = '1 1 auto'
+      panel.style.minHeight = '0'
+      this.body.appendChild(panel)
+      return
+    }
+    const scroll = h('div', { style: { flex: '1 1 auto', minHeight: '0', overflow: 'auto', padding: '8px' } },
+      ch.type === 'drum' ? this.drumPanel(ch) : this.samplerPanel(ch))
+    this.body.appendChild(scroll)
   }
 
   private header(ch: Channel): HTMLElement {
@@ -105,70 +120,13 @@ export class ChannelEditor {
     )
   }
 
-  /* ---------------- synthetiseur ---------------- */
+  /* ---------------- synthetiseur ----------------
+     La face avant complete vit dans son propre module : elle est trop
+     riche pour tenir dans l'editeur generique de channel. */
   private synthPanel(ch: Channel): HTMLElement {
-    const c = this.ctx
-    const s = ch.synth!
-    const K = (label: string, min: number, max: number, get: () => number, set: (v: number) => void, def: number, curve = 1, fmt?: (v: number) => string) =>
-      knob({ min, max, value: get(), def, label, size: 42, curve, color: ch.color, format: fmt,
-        onInput: (v) => { set(v); c.markDirty() } })
-
-    const shapeSel = (which: 1 | 2) => h('select', { class: 'sel', onchange: (e: Event) => {
-      const v = (e.target as HTMLSelectElement).value as OscShape
-      if (which === 1) s.osc1 = v; else s.osc2 = v
-      c.markDirty()
-    } }, ...SHAPES.map((sh) => h('option', { value: sh, selected: (which === 1 ? s.osc1 : s.osc2) === sh }, SHAPE_LABEL[sh])))
-
-    const presets: [string, Partial<typeof s>][] = [
-      ['BASSE 303', { osc1: 'saw', osc2: 'sine', mix: .15, cutoff: 480, reso: 14, envAmt: .8, decay: .25, sustain: .1, unison: 1, detune: 0, sub: .5 }],
-      ['SUPERSAW', { osc1: 'saw', osc2: 'saw', mix: .5, detune: 22, unison: 5, spread: .9, cutoff: 6000, reso: 2, sustain: .8, release: .5 }],
-      ['PLUCK Y2K', { osc1: 'square', osc2: 'saw', mix: .4, cutoff: 3000, reso: 8, envAmt: .7, attack: .002, decay: .18, sustain: .0, release: .15 }],
-      ['NAPPE MSN', { osc1: 'triangle', osc2: 'saw', mix: .35, attack: .35, decay: .8, sustain: .85, release: 1.1, cutoff: 2200, reso: 3, unison: 3, detune: 12 }],
-      ['CLOCHE', { osc1: 'sine', osc2: 'square', mix: .25, cutoff: 8000, reso: 1, attack: .001, decay: .9, sustain: 0, release: .8, sub: 0 }],
-      ['VENT', { osc1: 'noise', osc2: 'noise', mix: .5, cutoff: 1200, reso: 12, attack: .3, decay: 1, sustain: .6, release: .9 }],
-    ]
-
-    return h('div', {},
-      h('div', { class: 'chrome', style: { fontSize: '17px', marginBottom: '6px' } }, 'SYNTHETISEUR'),
-      h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '3px', marginBottom: '8px' } },
-        ...presets.map(([n, p]) => h('button', {
-          class: 'btn tiny',
-          onclick: () => { Object.assign(s, p); c.markDirty(); this.render(); void c.engine.preview(ch.id, 60, 6, .9) },
-        }, n))),
-      h('div', { class: 'fxunit' },
-        h('div', { class: 'fxhead' }, h('span', {}, 'OSCILLATEURS')),
-        h('div', { class: 'fxbody' },
-          h('div', { style: { display: 'flex', flexDirection: 'column', gap: '4px' } },
-            h('span', { class: 'knob-label' }, 'FORME 1'), shapeSel(1),
-            h('span', { class: 'knob-label' }, 'FORME 2'), shapeSel(2)),
-          K('MIX', 0, 1, () => s.mix, (v) => { s.mix = v }, .35),
-          K('DETUNE', 0, 60, () => s.detune, (v) => { s.detune = v }, 9),
-          K('UNISON', 1, 5, () => s.unison, (v) => { s.unison = Math.round(v) }, 3, 1, (v) => String(Math.round(v))),
-          K('LARGEUR', 0, 1, () => s.spread, (v) => { s.spread = v }, .4),
-          K('SUB', 0, 1, () => s.sub, (v) => { s.sub = v }, .25),
-          K('GLIDE', 0, .4, () => s.glide, (v) => { s.glide = v }, 0),
-        ),
-      ),
-      h('div', { class: 'fxunit', style: { marginTop: '6px' } },
-        h('div', { class: 'fxhead' }, h('span', {}, 'FILTRE')),
-        h('div', { class: 'fxbody' },
-          K('CUTOFF', 40, 18000, () => s.cutoff, (v) => { s.cutoff = v }, 2400, 2.6),
-          K('RESO', 0, 25, () => s.reso, (v) => { s.reso = v }, 6),
-          K('ENV', 0, 1, () => s.envAmt, (v) => { s.envAmt = v }, .55),
-          K('F.ATK', 0, .5, () => s.fAttack, (v) => { s.fAttack = v }, .004, 2),
-          K('F.DEC', .01, 2, () => s.fDecay, (v) => { s.fDecay = v }, .32, 2),
-        ),
-      ),
-      h('div', { class: 'fxunit', style: { marginTop: '6px' } },
-        h('div', { class: 'fxhead' }, h('span', {}, 'ENVELOPPE')),
-        h('div', { class: 'fxbody' },
-          K('ATTAQUE', 0, 2, () => s.attack, (v) => { s.attack = v }, .006, 2.4),
-          K('DECAY', .005, 2, () => s.decay, (v) => { s.decay = v }, .28, 2),
-          K('SUSTAIN', 0, 1, () => s.sustain, (v) => { s.sustain = v }, .55),
-          K('RELACHE', .01, 3, () => s.release, (v) => { s.release = v }, .22, 2),
-        ),
-      ),
-    )
+    if (!this.synth) this.synth = new SynthPanel(this.ctx, ch)
+    else this.synth.setChannel(ch)
+    return this.synth.el
   }
 
   /* ---------------- sampler ---------------- */
