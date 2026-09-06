@@ -8,7 +8,7 @@
 
 import type { Channel, DrumParams, SamplerParams, Note } from '../core/state'
 import { midiToRate, clamp } from '../core/state'
-import { playSynthVoice } from './synth'
+import { playSynthVoice, type VoiceHandle } from './synth'
 
 const ROOT = 60 // C5 dans notre convention
 
@@ -278,10 +278,14 @@ export function clearReverseCache() { revCache.clear() }
 /* Aiguillage                                                          */
 /* ------------------------------------------------------------------ */
 
+/** Declenche une note sur un channel.
+    Renvoie une poignee quand la voix sait etre relachee (synthe) : c'est
+    ce qui permet a une touche maintenue de s'arreter au relachement
+    plutot qu'a une duree fixe. Les percussions sont des one-shots. */
 export function triggerNote(
   ctx: BaseAudioContext, dest: AudioNode, ch: Channel, note: Note,
   time: number, bank: SampleBank, bpm: number, stepDur: number,
-): void {
+): VoiceHandle | null {
   const vel = clamp(note.vel, 0, 1)
   if (ch.type === 'drum' && ch.drum) {
     playDrum(ctx, dest, ch.drum, time, vel, ch.pitch + (note.key - ROOT))
@@ -289,7 +293,8 @@ export function triggerNote(
     playSample(ctx, dest, ch.sampler, bank, note, time, vel, ch.pitch, bpm, stepDur)
   } else if (ch.type === 'synth' && ch.synth) {
     const freq = 440 * Math.pow(2, (note.key + ch.pitch - 69) / 12)
-    playSynthVoice(ctx, dest, ch.synth, freq, note.key + ch.pitch, time,
+    return playSynthVoice(ctx, dest, ch.synth, freq, note.key + ch.pitch, time,
       Math.max(0.03, note.len * stepDur), vel, bpm)
   }
+  return null
 }

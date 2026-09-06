@@ -226,6 +226,7 @@ function buildLfo(ctx: BaseAudioContext, l: Lfo, t0: number, end: number, bpm: n
 function buildOsc(
   v: VoiceCtx, op: OscParams, dest: AudioNode,
   pitchMod: AudioNode | null, pwMod: AudioNode | null, end: number,
+  stops: AudioScheduledSourceNode[],
 ): void {
   if (op.level <= 0.001) return
   const { ctx, time, p } = v
@@ -244,6 +245,7 @@ function buildOsc(
       s.buffer = noiseBuffer(ctx); s.loop = true
       s.playbackRate.value = clamp(base / 220, 0.05, 6)
       s.start(time, Math.random() * 1.6); s.stop(end + 0.05)
+      stops.push(s)
       node = s
     } else {
       const o = ctx.createOscillator()
@@ -261,6 +263,7 @@ function buildOsc(
       // basculant sur des voix voisines n'aurait pas de sens ici, on laisse
       // la largeur fixe et le LFO agit sur le filtre a la place.
       o.start(time); o.stop(end + 0.05)
+      stops.push(o)
       node = o
     }
 
@@ -275,15 +278,31 @@ function buildOsc(
   void pwMod
 }
 
-/** Joue une note. Renvoie l'instant de fin, pour la gestion des voix. */
+/** Poignee de voix : permet de relacher une note tenue.
+    Sans elle, une note jouee au clavier durerait la duree fixe demandee
+    au declenchement — ce qui s'entend comme un enorme declin. */
+export interface VoiceHandle {
+  end: number
+  release(at: number): void
+}
+
+/** Maintient la valeur courante d'un parametre avant d'en reprogrammer une. */
+function holdParam(par: AudioParam, t: number) {
+  const anyPar = par as AudioParam & { cancelAndHoldAtTime?: (t: number) => void }
+  if (typeof anyPar.cancelAndHoldAtTime === 'function') anyPar.cancelAndHoldAtTime(t)
+  else { const v = par.value; par.cancelScheduledValues(t); par.setValueAtTime(v, t) }
+}
+
+/** Joue une note. Renvoie une poignee : instant de fin prevu, et relache. */
 export function playSynthVoice(
   ctx: BaseAudioContext, dest: AudioNode, p: SynthParams,
   freq: number, key: number, time: number, hold: number, vel: number, bpm: number,
   fromFreq?: number,
-): number {
+): VoiceHandle {
   const relTail = Math.max(p.ampEnv.r, p.filtEnv.r) + 0.05
   const end = time + Math.max(0.05, hold) + relTail + 0.1
   const v: VoiceCtx = { ctx, dest, p, freq, key, time, dur: hold, vel, bpm, fromFreq }
+  const stops: AudioScheduledSourceNode[] = []
 
   /* --- sortie de la voix : ampli -> panoramique -> destination --- */
   const amp = ctx.createGain()
@@ -341,17 +360,17 @@ export function playSynthVoice(
   aGain.connect(oscBus); bGain.connect(oscBus)
 
   const pm = pitchUsed ? pitchMod : null
-  buildOsc(v, p.oscA, aGain, pm, null, end)
-  buildOsc(v, p.oscB, bGain, pm, null, end)
+  buildOsc(v, p.oscA, aGain, pm, null, end, stops)
+  buildOsc(v, p.oscB, bGain, pm, null, end, stops)
 
   // modulation en anneau : B pilote le gain d'un multiplicateur traverse par A
   if (p.ring > 0.001) {
     const ringOut = ctx.createGain(); ringOut.gain.value = 0
     const ringLvl = ctx.createGain(); ringLvl.gain.value = p.ring
     const carrier = ctx.createGain(); carrier.gain.value = 1
-    buildOsc(v, { ...p.oscA, unison: 1, level: 1 }, carrier, pm, null, end)
+    buildOsc(v, { ...p.oscA, unison: 1, level: 1 }, carrier, pm, null, end, stops)
     const modulator = ctx.createGain(); modulator.gain.value = 1
-    buildOsc(v, { ...p.oscB, unison: 1, level: 1 }, modulator, pm, null, end)
+    buildOsc(v, { ...p.oscB, unison: 1, level: 1 }, modulator, pm, null, end, stops)
     modulator.connect(ringOut.gain)
     carrier.connect(ringOut).connect(ringLvl).connect(oscBus)
   }
@@ -364,6 +383,7 @@ export function playSynthVoice(
     const g = ctx.createGain(); g.gain.value = p.sub.level * 0.5
     o.connect(g).connect(oscBus)
     o.start(time); o.stop(end + 0.05)
+    stops.push(o)
   }
 
   if (p.noise > 0.001) {
@@ -372,6 +392,7 @@ export function playSynthVoice(
     const g = ctx.createGain(); g.gain.value = p.noise * 0.35
     s.connect(g).connect(oscBus)
     s.start(time, Math.random() * 1.6); s.stop(end + 0.05)
+    stops.push(s)
   }
 
   /* --- enveloppe d'amplitude --- */
@@ -380,10 +401,12 @@ export function playSynthVoice(
   applyEnv(amp.gain, p.ampEnv, time, hold, peak)
 
   /* --- enveloppe et modulation du filtre --- */
+  let filtBase = 0
   if (kind !== 'off') {
     const keyTrack = Math.pow(2, ((key - 60) / 12) * clamp(p.filter.key, 0, 1))
     const velCut = 1 + p.velCut * (vel - 0.5) * 2
     const base = clamp(p.filter.cutoff * keyTrack * velCut, 20, 19000)
+    filtBase = base
     const peakF = clamp(base * (1 + clamp(p.filter.env, 0, 1) * 22), 20, 19500)
     const target = (par: AudioParam) => {
       const e = p.filtEnv
@@ -424,7 +447,27 @@ export function playSynthVoice(
     }
   }
 
-  return end
+  return {
+    end,
+    /** Coupe la note maintenant plutot qu'a la fin prevue : l'enveloppe
+        repart de sa valeur courante vers zero, et les sources s'arretent
+        juste apres. */
+    release(at: number) {
+      const t = Math.max(at, time)
+      const r = Math.max(0.008, p.ampEnv.r)
+      holdParam(amp.gain, t)
+      amp.gain.linearRampToValueAtTime(0.0001, t + r)
+      if (kind !== 'off' && filtBase > 0) {
+        const fr = Math.max(0.008, p.filtEnv.r)
+        for (const par of [f1.frequency, f2?.frequency]) {
+          if (!par) continue
+          holdParam(par, t)
+          par.linearRampToValueAtTime(filtBase, t + fr)
+        }
+      }
+      for (const s of stops) { try { s.stop(t + r + 0.06) } catch { /* deja programme */ } }
+    },
+  }
 }
 
 /* ------------------------------------------------------------------ */

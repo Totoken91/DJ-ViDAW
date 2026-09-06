@@ -49,6 +49,8 @@ export class SynthPanel {
   private kbOn = true
   private kbHost!: HTMLElement
   private onKey: ((e: KeyboardEvent) => void) | null = null
+  private onKeyUp: ((e: KeyboardEvent) => void) | null = null
+  private onBlur: (() => void) | null = null
 
   private scope = scopeDisplay()
   private ampEnv: EnvEditor | null = null
@@ -82,6 +84,7 @@ export class SynthPanel {
   }
 
   setChannel(ch: Channel) {
+    this.releaseAll()
     this.ch = ch
     this.preset = -1
     this.render()
@@ -90,7 +93,10 @@ export class SynthPanel {
 
   dispose() {
     cancelAnimationFrame(this.raf)
+    this.releaseAll()
     if (this.onKey) window.removeEventListener('keydown', this.onKey)
+    if (this.onKeyUp) window.removeEventListener('keyup', this.onKeyUp)
+    if (this.onBlur) window.removeEventListener('blur', this.onBlur)
   }
 
   private p(): SynthParams { return this.ch.synth! }
@@ -199,8 +205,9 @@ export class SynthPanel {
     this.preview(60 + (this.octave - 4) * 12)
   }
 
+  /** Note courte auto-relachee : bouton TESTER, ecoute d'un preset. */
   private preview(key: number, vel = 0.9) {
-    void this.ctx.engine.preview(this.ch.id, key, 8, vel).then(() => this.attachProbe())
+    void this.ctx.engine.preview(this.ch.id, key, 3, vel).then(() => this.attachProbe())
   }
 
   /* ---------------- outils communs ---------------- */
@@ -543,28 +550,37 @@ export class SynthPanel {
     }
 
     let down = false
+    let cur: number | null = null   // note tenue par la souris
     const noteAt = (t: EventTarget | null) => {
       const el = (t as HTMLElement)?.closest?.('.syn-key') as HTMLElement | null
       return el ? Number(el.dataset.k) : null
     }
+    /** La hauteur du clic donne la force : en haut de la touche, plus doux. */
+    const velAt = (el: HTMLElement, y: number) => {
+      const r = el.getBoundingClientRect()
+      return clamp(0.35 + ((y - r.top) / r.height) * 0.65, 0.2, 1)
+    }
     wrap.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return
       down = true; wrap.setPointerCapture(e.pointerId)
       const k = noteAt(e.target)
-      if (k !== null) {
-        // la hauteur du clic donne la force : en haut de la touche, plus doux
-        const r = (e.target as HTMLElement).getBoundingClientRect()
-        const v = clamp(0.35 + ((e.clientY - r.top) / r.height) * 0.65, 0.2, 1)
-        this.strike(k, v)
-      }
+      if (k !== null) { cur = k; this.strike(k, velAt(e.target as HTMLElement, e.clientY)) }
     })
+    // Glissando : en glissant, la note precedente est relachee — sinon
+    // toutes les touches survolees resteraient tenues.
     wrap.addEventListener('pointermove', (e) => {
       if (!down) return
-      const k = noteAt(document.elementFromPoint(e.clientX, e.clientY))
-      if (k !== null && !this.held.has(k)) this.strike(k)
+      const el = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null
+      const k = noteAt(el)
+      if (k === cur) return
+      if (cur !== null) this.release(cur)
+      cur = k
+      if (k !== null && el) this.strike(k, velAt(el, e.clientY))
     })
-    const up = () => { down = false }
+    const up = () => { down = false; if (cur !== null) { this.release(cur); cur = null } }
     wrap.addEventListener('pointerup', up)
     wrap.addEventListener('pointercancel', up)
+    wrap.addEventListener('lostpointercapture', up)
 
     const bar = h('div', { class: 'syn-kbbar' },
       h('button', { class: 'syn-pick', onclick: () => { this.octave = clamp(this.octave - 1, 0, 7); this.rebuildKeys() } }, '− OCT'),
@@ -587,11 +603,12 @@ export class SynthPanel {
     this.kbHost.appendChild(this.keyboard())
   }
 
+  /** Enfoncement : la note demarre et TIENT jusqu'au relachement. */
   private strike(key: number, vel = 0.85) {
     if (this.held.has(key)) return
     this.held.add(key)
     this.keyEls.get(key)?.classList.add('on')
-    this.preview(key, vel)
+    void this.ctx.engine.noteOn(this.ch.id, key, vel).then(() => this.attachProbe())
     if (this.meta) {
       this.meta.innerHTML = ''
       this.meta.append(
@@ -600,11 +617,16 @@ export class SynthPanel {
         h('span', {}, this.p().mono ? 'MONO' : 'POLY'),
       )
     }
-    window.setTimeout(() => {
-      this.held.delete(key)
-      this.keyEls.get(key)?.classList.remove('on')
-    }, 420)
   }
+
+  /** Relachement : l'enveloppe repart de sa valeur courante vers zero. */
+  private release(key: number) {
+    if (!this.held.delete(key)) return
+    this.keyEls.get(key)?.classList.remove('on')
+    this.ctx.engine.noteOff(this.ch.id, key)
+  }
+
+  private releaseAll() { for (const k of [...this.held]) this.release(k) }
 
   private bindKeyboard() {
     this.onKey = (e: KeyboardEvent) => {
@@ -619,6 +641,17 @@ export class SynthPanel {
       e.preventDefault()
       this.strike(12 * this.octave + off)
     }
+    // Le relachement est volontairement plus permissif que l'enfoncement :
+    // si le panneau perd le focus touche enfoncee, la note doit quand meme
+    // s'arreter.
+    this.onKeyUp = (e: KeyboardEvent) => {
+      const off = KEYMAP[e.key.toLowerCase()]
+      if (off === undefined) return
+      this.release(12 * this.octave + off)
+    }
+    this.onBlur = () => this.releaseAll()
     window.addEventListener('keydown', this.onKey)
+    window.addEventListener('keyup', this.onKeyUp)
+    window.addEventListener('blur', this.onBlur)
   }
 }

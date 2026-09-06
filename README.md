@@ -92,6 +92,11 @@ choses y sont vivantes plutôt que numériques :
   leur forme, et chaque oscillateur montre sa propre onde.
 - **Clavier jouable** à la souris et au clavier d'ordinateur (`A/Q S D F G H J K`
   pour les blanches, `Z/W E T Y U` pour les noires), compatible AZERTY et QWERTY.
+- **Les notes tenues le sont vraiment** : appuyer déclenche, relâcher relâche.
+  Chaque voix rend une poignée qui sait couper son enveloppe depuis sa valeur
+  courante (`cancelAndHoldAtTime`, avec repli manuel), donc un appui bref donne
+  une note brève. Glisser sur le clavier joue en legato : la note précédente est
+  relâchée quand on arrive sur la suivante.
 
 L'impulsion à largeur variable passe par des tables de Fourier pré-calculées
 (Web Audio n'a pas de PWM natif), et la modulation en anneau exploite la
@@ -137,6 +142,53 @@ Deux écrans, dans l'ordre où ils existaient vraiment :
 
 Pas de titre en dégradé arc-en-ciel, pas de bouton pilule qui pulse : ce sont
 des tics de page d'accueil moderne, et ils n'ont rien à faire ici.
+
+### La souris, comme dans FL Studio
+
+Le clic droit n'y est pas un accessoire : c'est la moitié de l'interface. Chaque
+objet répond au clic droit par ses propres actions, et rien n'oblige à passer
+par une barre d'outils.
+
+**Channel Rack**
+
+| Geste | Effet |
+|---|---|
+| Clic maintenu | Peint les pas, **d'une ligne à l'autre** sans relâcher |
+| Clic maintenu sur un pas posé | Efface toute la traînée |
+| Clic droit maintenu | Gomme : tout ce que la souris survole |
+| `Ctrl`+glisser | Vélocité du pas, à la verticale |
+| Molette | Vélocité · `Maj` pour le mode fin |
+| Clic milieu | Ouvre le piano roll de l'instrument |
+| Clic droit sur le nom | Menu de l'instrument |
+| Clic droit sur le fond | Menu du motif |
+
+Le mode du geste est décidé par le **premier** pas touché : sur une case vide on
+pose, sur une case pleine on efface. C'est ce qui permet de nettoyer une mesure
+d'un seul mouvement sans changer d'outil.
+
+**Piano roll et Playlist**
+
+| Geste | Effet |
+|---|---|
+| Clic droit **glissé** | Gomme |
+| Clic droit **immobile** | Menu de la note ou du clip |
+| `Maj`+glisser | Duplique au lieu de déplacer |
+| Clic milieu + glisser | Déplace la vue |
+| `Suppr` | Efface la note survolée |
+
+La gomme droite ne mord qu'au premier déplacement : un clic droit qui ne bouge
+pas ouvre un menu, un clic droit qui glisse efface — y compris l'objet de départ.
+
+**Potards et faders**
+
+Glisser règle (`Maj` = mode fin), la molette avance par crans, le double-clic
+remet la valeur par défaut, les flèches règlent au clavier, et le clic droit
+ouvre un menu : saisir une valeur au clavier, aller au minimum, au milieu, au
+maximum, copier la valeur et la coller sur un autre potard.
+
+**Les menus** sont des menus Windows : gouttière d'icônes, sous-menus, pastilles
+de couleur, navigation aux flèches, première lettre pour sauter à une entrée,
+`Échap` pour fermer.
 
 ### Confort d'usage
 
@@ -252,9 +304,13 @@ anneau de sites — ce qu'on collait vraiment en bas d'une page en 2001.
 | `Ctrl+S` | Enregistrer dans le navigateur |
 | `Ctrl+R` | Beat aléatoire |
 | `1` … `9` | Sélectionner un channel |
-| Clic droit sur un pas | Changer la vélocité |
+| Clic droit maintenu sur les pas | Gomme balayée |
+| `Ctrl`+glisser sur un pas | Vélocité |
 | Molette sur un potard | Réglage · `Maj` pour le mode fin |
 | Double-clic sur un potard | Valeur par défaut |
+| Clic droit sur un potard | Son menu (saisir, copier, coller) |
+| Clic milieu + glisser | Déplacer la vue (piano roll, playlist) |
+| `Suppr` | Efface la note survolée (piano roll) |
 | `Ctrl`+molette | Zoom (piano roll, playlist) |
 | `Ctrl + Z` / `Ctrl + Maj + Z` | Annuler / rétablir |
 | `Alt + 1` … `Alt + 7` | Ouvrir ou fermer une fenêtre |
@@ -317,12 +373,13 @@ src/
 │  └─ samples.ts        décodage, pics d'affichage, détection de transitoires
 ├─ worklets/            bitcrusher et tap d'enregistrement (JS pur)
 ├─ ui/                  fenêtres, séquenceur, piano roll, playlist, mixeur…
+│  ├─ menu.ts           les menus contextuels partagés
 │  ├─ icons.ts          le jeu d'icônes et la mascotte, en SVG
 │  ├─ synth.ts          la face avant du synthétiseur
 │  ├─ wallpaper.ts      le paysage calculé
 │  └─ nightcore.ts      l'applet Nightcorification
 └─ styles/              xp.css (Luna) · daw.css (FL) · goofy.css (Y2K)
-                        nightcore.css · synth.css
+                        nightcore.css · synth.css · menu.css
 ```
 
 ---

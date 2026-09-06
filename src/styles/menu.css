@@ -1,0 +1,94 @@
+/* ============================================================
+   DJ ViDAW — MENUS CONTEXTUELS
+   Un menu XP : bord clair en haut/gauche, ombre portee franche,
+   gouttiere d'icones, et la barre bleue de selection.
+   ============================================================ */
+
+.ctxmenu {
+  position: fixed; z-index: 9000;
+  min-width: 172px;
+  padding: 2px;
+  background: var(--xp-face);
+  border: 1px solid #7a7566;
+  border-top-color: #fff; border-left-color: #fff;
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, .38);
+  font: 11px Tahoma, "Segoe UI", "DejaVu Sans", Verdana, sans-serif;
+  color: #101010;
+  outline: none;
+  max-height: calc(100vh - 16px);
+  overflow-y: auto;
+  animation: ctx-in 70ms ease-out;
+}
+@keyframes ctx-in { from { opacity: 0; transform: translateY(-3px) } }
+@media (prefers-reduced-motion: reduce) { .ctxmenu { animation: none } }
+
+/* La gouttiere : c'est elle qui fait « menu Windows » plutot que « liste ». */
+.ctxmenu::before {
+  content: ''; position: absolute; top: 2px; bottom: 2px; left: 2px;
+  width: 22px; pointer-events: none;
+  background: linear-gradient(180deg, #f6f4ec, #ded9c6);
+  border-right: 1px solid #cdc7b4;
+}
+
+.ctx-head {
+  position: relative; z-index: 1;
+  margin: 0 0 2px; padding: 3px 8px 4px 26px;
+  font-weight: bold; letter-spacing: .04em; text-transform: uppercase;
+  font-size: 10px; color: #fff;
+  background: linear-gradient(180deg, var(--xp-blue-2), var(--xp-blue-3));
+  white-space: nowrap;
+}
+.ctx-title {
+  position: relative; z-index: 1;
+  padding: 5px 8px 2px 26px;
+  font-size: 9px; font-weight: bold; letter-spacing: .08em;
+  text-transform: uppercase; color: #7a7566;
+}
+
+.ctx-sep {
+  position: relative; z-index: 1;
+  margin: 3px 2px 3px 26px; height: 0;
+  border-top: 1px solid #b9b3a1; border-bottom: 1px solid #fff;
+}
+
+.ctx-row {
+  position: relative; z-index: 1;
+  display: flex; align-items: center; gap: 6px;
+  padding: 3px 8px 3px 4px;
+  white-space: nowrap; cursor: default;
+}
+.ctx-ico {
+  flex: 0 0 18px; width: 18px;
+  display: flex; align-items: center; justify-content: center;
+  color: #3a3a3a; font-size: 11px; line-height: 1;
+}
+.ctx-ico svg { display: block; }
+.ctx-label { flex: 1 1 auto; padding-right: 14px; }
+.ctx-accel { flex: 0 0 auto; color: #6f6a5c; font-size: 10px; }
+.ctx-arrow { flex: 0 0 auto; color: #3a3a3a; font-size: 9px; }
+
+.ctx-row.hot, .ctx-row.open, .ctx-row:hover {
+  background: linear-gradient(180deg, var(--xp-blue-2), var(--xp-blue-3));
+  color: #fff;
+}
+.ctx-row.hot .ctx-ico, .ctx-row:hover .ctx-ico,
+.ctx-row.hot .ctx-accel, .ctx-row:hover .ctx-accel,
+.ctx-row.hot .ctx-arrow, .ctx-row:hover .ctx-arrow { color: #eaf3ff; }
+
+.ctx-row.danger .ctx-label { color: #9a1d1d; }
+.ctx-row.danger.hot .ctx-label, .ctx-row.danger:hover .ctx-label { color: #ffdede; }
+
+.ctx-row.off { color: #9b968a; }
+.ctx-row.off .ctx-label { text-shadow: 1px 1px 0 #fff; }
+.ctx-row.off:hover { background: none; color: #9b968a; }
+
+.ctx-row.checked .ctx-ico { color: #1d5e1d; font-weight: bold; }
+.ctx-row.checked.hot .ctx-ico, .ctx-row.checked:hover .ctx-ico { color: #d6ffd6; }
+
+/* Pastille de couleur : la coche ne dit pas la meme chose qu'un echantillon. */
+.ctx-swatch {
+  width: 12px; height: 12px; display: block;
+  border: 1px solid rgba(0, 0, 0, .55);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .5);
+}
+.ctx-swatch.on { outline: 2px solid #111; outline-offset: 1px; }

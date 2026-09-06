@@ -7,6 +7,7 @@
 import { h, clear } from './dom'
 import { icon } from './icons'
 import { knob, fader, meter } from './knob'
+import { contextMenu } from './menu'
 import type { Ctx } from './ctx'
 import type { FxType, FxSlot } from '../core/state'
 import { FX_DEFS, makeFx, clamp } from '../core/state'
@@ -80,7 +81,7 @@ export class Mixer {
       const chNames = c.project.channels.filter((ch) => ch.insert === i).map((ch) => ch.name)
 
       const f = fader({
-        min: 0, max: 1.4, value: ins.vol, height: 118,
+        min: 0, max: 1.4, value: ins.vol, height: 118, def: 0.8, label: ins.name,
         onInput: (v) => { ins.vol = v; c.sync(); c.markDirty() },
         color: i === 0 ? '#b08fd0' : undefined,
       })
@@ -133,7 +134,7 @@ export class Mixer {
       h('span', { class: 'chrome', style: { fontSize: '15px' } }, ins.name),
       add,
       h('div', { class: 'spacer' }),
-      h('span', { class: 'hint' }, 'double-clic sur un potard = valeur par defaut'),
+      h('span', { class: 'hint' }, 'double-clic sur un potard = valeur par defaut · clic droit = son menu'),
     ))
 
     if (!ins.fx.length) {
@@ -179,8 +180,14 @@ export class Mixer {
       c.sync(); c.markDirty(); this.renderFx()
     }
 
+    const remove = () => {
+      const ins = c.project.inserts[this.sel]
+      ins.fx.splice(idx, 1)
+      c.sync(); c.markDirty(); this.renderFx(); this.renderStrips()
+    }
+
     const fam = FX_FAMILY[slot.type]
-    return h('div', { class: `fxunit${slot.on ? '' : ' off'}`, style: { '--fam': fam.color } },
+    const unit = h('div', { class: `fxunit${slot.on ? '' : ' off'}`, style: { '--fam': fam.color } },
       h('div', { class: 'fxhead' },
         h('button', {
           class: `btn xs${slot.on ? ' on' : ''}`,
@@ -193,16 +200,31 @@ export class Mixer {
         h('div', { class: 'spacer' }),
         idx > 0 ? h('button', { class: 'btn xs', onclick: () => move(-1) }, '▲') : null,
         idx < total - 1 ? h('button', { class: 'btn xs', onclick: () => move(1) }, '▼') : null,
-        h('button', {
-          class: 'btn xs', onclick: () => {
-            const ins = c.project.inserts[this.sel]
-            ins.fx.splice(idx, 1)
-            c.sync(); c.markDirty(); this.renderFx(); this.renderStrips()
-          },
-        }, '✕'),
+        h('button', { class: 'btn xs', onclick: remove }, '✕'),
       ),
       body,
     )
+
+    // Clic droit n'importe ou sur l'unite : ce que proposent les boutons,
+    // sans avoir a viser un carre de neuf pixels.
+    unit.addEventListener('contextmenu', (e) => {
+      if ((e.target as HTMLElement).closest('.knob')) return   // le potard a son propre menu
+      contextMenu(e, [
+        { label: slot.on ? 'Contourner' : 'Reactiver', ico: 'plug', checked: !slot.on,
+          onClick: () => { slot.on = !slot.on; c.sync(); c.markDirty(); this.renderFx() } },
+        { label: 'Remettre a zero', ico: 'loop', onClick: () => {
+          const d = FX_DEFS[slot.type]
+          for (const [k, [, , dflt]] of Object.entries(d.params)) slot.p[k] = dflt
+          c.sync(); c.markDirty(); this.renderFx()
+        } },
+        '-',
+        { label: 'Monter', disabled: idx === 0, onClick: () => move(-1) },
+        { label: 'Descendre', disabled: idx >= total - 1, onClick: () => move(1) },
+        '-',
+        { label: 'Retirer', ico: 'trash', danger: true, onClick: remove },
+      ], { title: FX_DEFS[slot.type].label })
+    })
+    return unit
   }
 
   tick() { for (const m of this.meters) m.tick() }

@@ -101,6 +101,14 @@
 .knob-cv { display: block; }
 .knob-label { font: 700 8px/1 Tahoma, sans-serif; color: #b9bfcd; letter-spacing: .4px; text-transform: uppercase; }
 .knob-val { font: 700 8px/1.2 "Courier New", monospace; color: var(--amber); min-height: 10px; }
+/* Saisie directe : le readout devient un champ, sans changer de gabarit. */
+.knob-type {
+  width: 46px; padding: 0 2px; text-align: center;
+  font: 700 8px/1.2 "Courier New", monospace;
+  color: var(--amber); background: #0a0d10;
+  border: 1px solid var(--hot-deep); outline: none;
+}
+.knob:focus-visible { outline: 2px solid var(--sel); outline-offset: 2px; }
 
 /* ---------- Faders ---------- */
 .fader { display: flex; justify-content: center; }

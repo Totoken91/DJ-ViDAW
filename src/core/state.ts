@@ -148,6 +148,12 @@ export const CH_COLORS = [
   '#94816b', // argile
 ]
 
+/** Les memes, en clair : un menu de couleurs sans nom n'est qu'une grille. */
+export const CH_COLOR_NAMES = [
+  'Terre cuite', 'Ocre', 'Olive', 'Sauge', 'Sarcelle',
+  'Denim', 'Ardoise', 'Prune', 'Rose fane', 'Argile',
+]
+
 /* ------------------------------------------------------------------ */
 /* Presets de paramètres                                               */
 /* ------------------------------------------------------------------ */

@@ -8,6 +8,7 @@ import './styles/daw.css'
 import './styles/goofy.css'
 import './styles/nightcore.css'
 import './styles/synth.css'
+import './styles/menu.css'
 
 import { h, clear } from './ui/dom'
 import { Win, type Geometry } from './ui/win'
@@ -498,11 +499,11 @@ function buildUI() {
   }
 
   mk('rack', 'Channel Rack', 'rack', rack.el, 106, 8, 690, 348, undefined,
-     'Clic pour poser un pas · clic droit ou molette pour la velocite · double-clic sur un nom pour le piano roll')
+     'Clic glisse pour peindre · clic droit glisse pour effacer · Ctrl+glisser ou molette pour la velocite · clic droit sur un nom pour son menu')
   mk('roll', 'Piano roll', 'piano', roll.el, 330, 210, 740, 410, () => roll.resize(),
-     'Clic pour poser une note · glisser son bord droit pour la longueur · Ctrl+molette pour zoomer')
+     'Clic pour poser · bord droit pour la longueur · clic droit glisse pour effacer · clic droit pour le menu · clic milieu pour deplacer la vue')
   mk('playlist', 'Playlist', 'playlist', playlist.el, 150, 348, 800, 300, () => playlist.resize(),
-     'Clic pour poser un motif · clic droit pour effacer · glisser pour deplacer · Maj+molette pour les pistes')
+     'Clic pour poser un motif · clic droit glisse pour effacer · clic droit pour le menu · Maj+glisser pour dupliquer')
   mk('mixer', 'Mixeur', 'mixer', mixer.el, 790, 8, 620, 570, undefined,
      'Choisis une tranche, puis ajoute ses effets en dessous')
   mk('channel', 'Instrument', 'wrench', chEditor.el, 170, 74, 860, 620, () => chEditor.resize(),
@@ -689,13 +690,31 @@ function showHelp() {
       ['Tab / Maj + Tab', 'Channel suivant ou precedent'],
       ['?', 'Afficher cette liste'],
     ]],
-    ['Souris', [
-      ['Clic sur un pas', 'Poser ou retirer une note'],
-      ['Clic droit sur un pas', 'Changer la velocite'],
-      ['Molette sur un potard', 'Regler · Maj pour le mode fin'],
-      ['Double-clic sur un potard', 'Valeur par defaut'],
-      ['Ctrl + molette', 'Zoom (piano roll, playlist)'],
+    ['Souris — Channel Rack', [
+      ['Clic maintenu', 'Peindre les pas, meme d\'une ligne a l\'autre'],
+      ['Clic maintenu sur un pas pose', 'Effacer la trainee'],
+      ['Clic droit maintenu', 'Gomme : tout ce que la souris survole'],
+      ['Ctrl + glisser', 'Velocite du pas, a la verticale'],
+      ['Molette sur un pas', 'Velocite · Maj pour le mode fin'],
+      ['Clic milieu sur un pas', 'Ouvrir le piano roll de l\'instrument'],
+      ['Clic droit sur le nom', 'Menu de l\'instrument'],
+      ['Clic droit sur le fond', 'Menu du motif'],
+    ]],
+    ['Souris — Piano roll et Playlist', [
+      ['Clic droit glisse', 'Gomme : tout ce que la souris survole'],
+      ['Clic droit immobile', 'Menu de la note ou du clip'],
+      ['Suppr (piano roll)', 'Efface la note survolee'],
+      ['Maj + glisser', 'Dupliquer'],
+      ['Clic milieu + glisser', 'Deplacer la vue'],
+      ['Ctrl + molette', 'Zoom'],
       ['Alt + clic sur la forme d\'onde', 'Poser une tranche'],
+    ]],
+    ['Souris — Potards et faders', [
+      ['Glisser', 'Regler · Maj pour le mode fin'],
+      ['Molette', 'Regler par crans'],
+      ['Double-clic', 'Valeur par defaut'],
+      ['Clic droit', 'Menu : saisir, copier, coller une valeur'],
+      ['Fleches (potard selectionne)', 'Regler au clavier'],
     ]],
     ['Synthetiseur', [
       ['A/Q S D F G H J K', 'Jouer les touches blanches'],

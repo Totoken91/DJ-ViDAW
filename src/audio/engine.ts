@@ -8,6 +8,7 @@ import type { Project, Note } from '../core/state'
 import { STEPS_PER_BAR, patternSteps, songLengthSteps, clamp } from '../core/state'
 import { buildGraph, type Graph } from './graph'
 import { triggerNote, type SampleBank, type F32 } from './voices'
+import type { VoiceHandle } from './synth'
 import { loadWorklets } from './fx'
 import crusherSrc from '../worklets/crusher.js?raw'
 import tapSrc from '../worklets/tap.js?raw'
@@ -202,16 +203,54 @@ export class Engine {
     return strip.probe
   }
 
-  /* Preecoute d'une note isolee (clic sur le piano roll, aperçu de channel) */
-  async preview(chId: string, key = 60, len = 4, vel = 0.9) {
+  /* Preecoute d'une note isolee (clic sur le piano roll, aperçu de channel).
+     On declenche a currentTime : toute avance ajoutee ici s'entendrait
+     comme une latence supplementaire au clavier. */
+  async preview(chId: string, key = 60, len = 4, vel = 0.9): Promise<VoiceHandle | null> {
     await this.init()
     const ch = this.project.channels.find((c) => c.id === chId)
-    if (!ch) return
+    if (!ch) return null
     const strip = this.graph?.channels.get(ch.id)
-    if (!strip) return
-    const t = this.ctx!.currentTime + 0.01
-    triggerNote(this.ctx!, strip.input, ch, { id: 'prev', ch: chId, t: 0, len, key, vel, slice: -1 },
-      t, this.bank, this.project.bpm, this.stepDur)
+    if (!strip) return null
+    return triggerNote(this.ctx!, strip.input, ch, { id: 'prev', ch: chId, t: 0, len, key, vel, slice: -1 },
+      this.ctx!.currentTime, this.bank, this.project.bpm, this.stepDur)
+  }
+
+  /* ---------- notes tenues (clavier a l'ecran / clavier PC) ----------
+     Le declenchement est asynchrone (l'AudioContext peut avoir besoin
+     d'etre reveille) : on reserve donc l'emplacement tout de suite pour
+     qu'un relachement arrive entre-temps ne soit pas perdu. */
+  private heldVoices = new Map<string, { h: VoiceHandle | null; off: boolean }>()
+
+  async noteOn(chId: string, key = 60, vel = 0.9) {
+    const id = `${chId}:${key}`
+    this.noteOff(chId, key)
+    const slot: { h: VoiceHandle | null; off: boolean } = { h: null, off: false }
+    this.heldVoices.set(id, slot)
+    // Note maintenue : on demande une duree tres longue, le relachement
+    // decidera de la vraie fin.
+    const len = Math.max(4, Math.ceil(30 / Math.max(0.01, this.stepDur)))
+    const h = await this.preview(chId, key, len, vel)
+    slot.h = h
+    if (slot.off) this.releaseSlot(slot)
+  }
+
+  noteOff(chId: string, key: number) {
+    const id = `${chId}:${key}`
+    const slot = this.heldVoices.get(id)
+    if (!slot) return
+    this.heldVoices.delete(id)
+    this.releaseSlot(slot)
+  }
+
+  allNotesOff() {
+    for (const slot of this.heldVoices.values()) this.releaseSlot(slot)
+    this.heldVoices.clear()
+  }
+
+  private releaseSlot(slot: { h: VoiceHandle | null; off: boolean }) {
+    slot.off = true
+    slot.h?.release(this.ctx ? this.ctx.currentTime : 0)
   }
 
   /* -------------------- enregistrement live -------------------- */

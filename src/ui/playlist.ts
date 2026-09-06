@@ -1,11 +1,14 @@
 /* ============================================================
    DJ ViDAW — PLAYLIST (arrangement)
    On peint des clips de pattern sur des pistes. Clic = poser,
-   clic droit = effacer, glisser = deplacer, bord droit = etirer.
+   clic droit maintenu = gomme, clic droit immobile = menu,
+   glisser = deplacer, bord droit = etirer, clic milieu = deplacer
+   la vue, Maj+glisser = dupliquer.
    ============================================================ */
 
 import { h } from './dom'
 import { icon } from './icons'
+import { contextMenu, type MenuItem } from './menu'
 import type { Ctx } from './ctx'
 import type { Clip } from '../core/state'
 import { uid, patternSteps, clamp, STEPS_PER_BAR } from '../core/state'
@@ -29,8 +32,10 @@ export class Playlist {
   private drag:
     | { kind: 'move'; clip: Clip; ox: number; oy: number; s0: number; tr0: number }
     | { kind: 'len'; clip: Clip; ox: number; l0: number }
-    | { kind: 'erase' }
+    | { kind: 'erase'; pending: Clip | null }
+    | { kind: 'pan'; x0: number; y0: number; sx: number; sy: number }
     | null = null
+  private moved = false
 
   constructor(private ctx: Ctx) {
     this.cv = h('canvas')
@@ -231,6 +236,60 @@ export class Playlist {
     return null
   }
 
+  /** Clic droit immobile : le menu du clip, ou celui de la piste. */
+  private clipMenu(ev: MouseEvent, clip: Clip | null, y: number) {
+    const c = this.ctx
+    const pats = c.project.patterns
+    const tr = clamp(this.yToTrack(y), 0, TRACKS - 1)
+    const items: MenuItem[] = clip ? [
+      { label: 'Supprimer', ico: 'trash', danger: true, accel: 'clic droit glisse', onClick: () => {
+        c.project.clips = c.project.clips.filter((x) => x !== clip)
+        c.markDirty(); this.draw()
+      } },
+      { label: 'Dupliquer a la suite', ico: 'newdoc', accel: 'Maj+glisser', onClick: () => {
+        c.project.clips.push({ ...clip, id: uid('c'), start: clip.start + clip.len })
+        c.markDirty(); this.draw()
+      } },
+      { label: 'Repeter 4 fois', ico: 'loop', onClick: () => {
+        for (let i = 1; i < 4; i++) c.project.clips.push({ ...clip, id: uid('c'), start: clip.start + clip.len * i })
+        c.markDirty(); this.draw()
+      } },
+      '-',
+      { label: 'Changer de motif', ico: 'rack', sub: pats.map((p) => ({
+        label: p.name, swatch: p.color, checked: p.id === clip.pat,
+        onClick: () => { clip.pat = p.id; clip.len = patternSteps(p); c.markDirty(); this.draw() },
+      })) },
+      { label: 'Editer ce motif', ico: 'wrench', onClick: () => {
+        c.project.currentPattern = clip.pat
+        c.refresh('all'); c.openWindow('rack')
+      } },
+    ] : [
+      { label: 'Poser un motif ici', ico: 'plus', sub: pats.map((p, i) => ({
+        label: p.name, swatch: p.color,
+        onClick: () => {
+          const start = Math.max(0, Math.round(this.xToStep(ev.offsetX) / STEPS_PER_BAR) * STEPS_PER_BAR)
+          c.project.clips.push({ id: uid('c'), pat: p.id, track: tr, start, len: patternSteps(p) })
+          this.brush = i; this.brushSel.selectedIndex = i
+          c.markDirty(); this.draw()
+        },
+      })) },
+      '-',
+      { label: `Vider la piste ${tr + 1}`, ico: 'broom', danger: true, onClick: () => {
+        c.project.clips = c.project.clips.filter((x) => x.track !== tr)
+        c.markDirty(); this.draw()
+      } },
+      { label: 'Vider toute la playlist', ico: 'trash', danger: true, onClick: () => {
+        c.project.clips = []
+        c.markDirty(); this.draw()
+      } },
+      '-',
+      { label: 'Revenir au debut', ico: 'screen', accel: 'clic milieu', onClick: () => {
+        this.scrollX = 0; this.scrollY = 0; this.draw()
+      } },
+    ]
+    contextMenu(ev, items, { title: clip ? (pats.find((p) => p.id === clip.pat)?.name ?? 'Clip') : `Piste ${tr + 1}` })
+  }
+
   private bind() {
     const cv = this.cv
     const pos = (e: PointerEvent) => {
@@ -238,10 +297,25 @@ export class Playlist {
       return { x: e.clientX - r.left, y: e.clientY - r.top }
     }
     cv.addEventListener('contextmenu', (e) => e.preventDefault())
+    cv.addEventListener('pointerup', (e) => {
+      if (e.button !== 2 || this.moved) return
+      const { x, y } = pos(e)
+      if (y < RULER_H) return
+      this.clipMenu(e, this.hit(x, y)?.clip ?? null, y)
+    })
 
     cv.addEventListener('pointerdown', (e) => {
       const { x, y } = pos(e)
+      this.moved = false
       cv.setPointerCapture(e.pointerId)
+
+      // Clic milieu : on deplace la vue, sans changer d'outil.
+      if (e.button === 1) {
+        e.preventDefault()
+        this.drag = { kind: 'pan', x0: x, y0: y, sx: this.scrollX, sy: this.scrollY }
+        cv.style.cursor = 'grabbing'
+        return
+      }
       if (y < RULER_H) {
         const s = Math.max(0, Math.round(this.xToStep(x) / STEPS_PER_BAR) * STEPS_PER_BAR)
         this.ctx.engine.seek(s)
@@ -253,16 +327,24 @@ export class Playlist {
       const erase = e.button === 2 || e.altKey
 
       if (hit && erase) {
+        // clic droit immobile = menu du clip ; clic droit glisse = gomme
+        if (e.button === 2) { this.drag = { kind: 'erase', pending: hit.clip }; return }
         this.ctx.project.clips = this.ctx.project.clips.filter((c) => c !== hit.clip)
         this.ctx.markDirty(); this.draw()
-        this.drag = { kind: 'erase' }
+        this.drag = { kind: 'erase', pending: null }
         return
       }
-      if (erase) { this.drag = { kind: 'erase' }; return }
+      if (erase) { this.drag = { kind: 'erase', pending: null }; return }
       if (hit && hit.edge) { this.drag = { kind: 'len', clip: hit.clip, ox: x, l0: hit.clip.len }; return }
       if (hit) {
-        this.drag = { kind: 'move', clip: hit.clip, ox: x, oy: y, s0: hit.clip.start, tr0: hit.clip.track }
-        this.ctx.project.currentPattern = hit.clip.pat
+        // Maj + glisser duplique le clip au lieu de le deplacer.
+        let clip = hit.clip
+        if (e.shiftKey) {
+          clip = { ...hit.clip, id: uid('c') }
+          this.ctx.project.clips.push(clip)
+        }
+        this.drag = { kind: 'move', clip, ox: x, oy: y, s0: clip.start, tr0: clip.track }
+        this.ctx.project.currentPattern = clip.pat
         this.ctx.refresh('all')
         return
       }
@@ -282,6 +364,13 @@ export class Playlist {
     cv.addEventListener('pointermove', (e) => {
       const { x, y } = pos(e)
       const d = this.drag
+      if (e.buttons) this.moved = true
+      if (d?.kind === 'pan') {
+        this.scrollX = Math.max(0, d.sx - (x - d.x0))
+        this.scrollY = clamp(d.sy - (y - d.y0), 0, Math.max(0, TRACKS * this.trackH - 60))
+        this.draw()
+        return
+      }
       if (!d) {
         const hh = this.hit(x, y)
         cv.style.cursor = y < RULER_H ? 'col-resize' : hh ? (hh.edge ? 'ew-resize' : 'move') : 'crosshair'
@@ -298,15 +387,14 @@ export class Playlist {
         d.clip.len = Math.max(STEPS_PER_BAR, d.l0 + dl)
         this.ctx.markDirty(); this.draw()
       } else if (d.kind === 'erase') {
+        if (d.pending) { this.ctx.project.clips = this.ctx.project.clips.filter((c) => c !== d.pending); d.pending = null }
         const hh = this.hit(x, y)
-        if (hh) {
-          this.ctx.project.clips = this.ctx.project.clips.filter((c) => c !== hh.clip)
-          this.ctx.markDirty(); this.draw()
-        }
+        if (hh) this.ctx.project.clips = this.ctx.project.clips.filter((c) => c !== hh.clip)
+        this.ctx.markDirty(); this.draw()
       }
     })
 
-    const end = () => { this.drag = null }
+    const end = () => { this.drag = null; cv.style.cursor = 'crosshair' }
     cv.addEventListener('pointerup', end)
     cv.addEventListener('pointercancel', end)
 

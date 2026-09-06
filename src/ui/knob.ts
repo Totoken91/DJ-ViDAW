@@ -5,7 +5,12 @@
    ============================================================ */
 
 import { h, drag } from './dom'
+import { contextMenu } from './menu'
 import { clamp } from '../core/state'
+
+/** Presse-papiers de valeur, partage par tous les potards de la page :
+    copier un reglage puis le coller ailleurs est un geste de studio. */
+let clip: { v: number; label: string } | null = null
 
 export interface KnobOpts {
   min: number
@@ -147,6 +152,55 @@ export function knob(o: KnobOpts): HTMLElement {
     set(denorm(norm(value) - Math.sign(e.deltaY) * fine))
   }, { passive: false })
 
+  /* --- saisie au clavier : le readout devient un champ --- */
+  function typeIn() {
+    const inp = h('input', { class: 'knob-type', value: fmtV(value).replace(/[^\d.,+-]/g, '') })
+    readout.replaceWith(inp)
+    inp.focus(); inp.select()
+    const done = (ok: boolean) => {
+      if (ok) {
+        const n = parseFloat(inp.value.replace(',', '.'))
+        if (Number.isFinite(n)) set(n)
+      }
+      inp.replaceWith(readout)
+      paint()
+    }
+    inp.addEventListener('blur', () => done(true))
+    inp.addEventListener('keydown', (e) => {
+      e.stopPropagation()
+      if (e.key === 'Enter') { e.preventDefault(); done(true) }
+      if (e.key === 'Escape') { e.preventDefault(); done(false) }
+    })
+  }
+
+  /* --- clic droit : le menu du potard, comme dans un vrai hote --- */
+  wrap.addEventListener('contextmenu', (e) => {
+    contextMenu(e, [
+      { label: `Valeur par defaut (${fmtV(def)})`, ico: 'loop', accel: 'double-clic', onClick: () => set(def) },
+      { label: 'Saisir une valeur...', ico: 'doc', onClick: typeIn },
+      '-',
+      { label: `Minimum (${fmtV(o.min)})`, onClick: () => set(o.min) },
+      { label: 'Milieu', onClick: () => set(denorm(0.5)) },
+      { label: `Maximum (${fmtV(o.max)})`, onClick: () => set(o.max) },
+      '-',
+      { label: 'Copier la valeur', ico: 'newdoc', onClick: () => { clip = { v: value, label: o.label ?? '' } } },
+      { label: clip ? `Coller (${fmtV(clip.v)})` : 'Coller', ico: 'down', disabled: !clip, onClick: () => { if (clip) set(clip.v) } },
+    ], { title: o.label ?? 'Reglage' })
+  })
+
+  wrap.tabIndex = 0
+  wrap.setAttribute('role', 'slider')
+  if (o.label) wrap.setAttribute('aria-label', o.label)
+  wrap.addEventListener('keydown', (e) => {
+    const fine = e.shiftKey ? 0.01 : 0.04
+    if (e.key === 'ArrowUp' || e.key === 'ArrowRight') { e.preventDefault(); set(denorm(norm(value) + fine)) }
+    else if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') { e.preventDefault(); set(denorm(norm(value) - fine)) }
+    else if (e.key === 'Home') { e.preventDefault(); set(o.min) }
+    else if (e.key === 'End') { e.preventDefault(); set(o.max) }
+    else if (e.key === 'Backspace' || e.key === 'Delete') { e.preventDefault(); set(def) }
+    else if (e.key === 'Enter') { e.preventDefault(); typeIn() }
+  })
+
   paint()
   ;(wrap as HTMLElement & { setValue?: (v: number) => void }).setValue = (v: number) => set(v, false)
   return wrap
@@ -155,8 +209,8 @@ export function knob(o: KnobOpts): HTMLElement {
 /* ---------------- Fader vertical (mixeur) ---------------- */
 
 export function fader(o: {
-  min: number; max: number; value: number; height?: number
-  onInput: (v: number) => void; color?: string
+  min: number; max: number; value: number; height?: number; def?: number
+  onInput: (v: number) => void; color?: string; label?: string
 }): HTMLElement {
   const H = o.height ?? 120
   let value = clamp(o.value, o.min, o.max)
@@ -179,8 +233,18 @@ export function fader(o: {
     () => { start = value })
   track.addEventListener('wheel', (e) => {
     e.preventDefault()
-    set(value - Math.sign(e.deltaY) * (o.max - o.min) * 0.04)
+    set(value - Math.sign(e.deltaY) * (o.max - o.min) * (e.shiftKey ? 0.01 : 0.04))
   }, { passive: false })
+
+  const def = o.def ?? o.value
+  wrap.addEventListener('dblclick', () => set(def))
+  wrap.addEventListener('contextmenu', (e) => {
+    contextMenu(e, [
+      { label: 'Valeur par defaut', ico: 'loop', accel: 'double-clic', onClick: () => set(def) },
+      { label: 'Au minimum', onClick: () => set(o.min) },
+      { label: 'Au maximum', onClick: () => set(o.max) },
+    ], { title: o.label ?? 'Niveau' })
+  })
 
   paint()
   ;(wrap as HTMLElement & { setValue?: (v: number) => void }).setValue = (v: number) => {

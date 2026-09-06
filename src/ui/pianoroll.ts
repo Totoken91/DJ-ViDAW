@@ -6,6 +6,7 @@
 
 import { h } from './dom'
 import { icon } from './icons'
+import { contextMenu, type MenuItem } from './menu'
 import type { Ctx } from './ctx'
 import type { Note } from '../core/state'
 import { uid, patternSteps, keyName, isBlack, clamp } from '../core/state'
@@ -35,8 +36,12 @@ export class PianoRoll {
     | { kind: 'move'; note: Note; ox: number; oy: number; startT: number; startKey: number }
     | { kind: 'resize'; note: Note; startLen: number; ox: number }
     | { kind: 'vel'; note: Note }
-    | { kind: 'paint'; last: number }
+    | { kind: 'paint'; last: number; pending: Note | null }
+    | { kind: 'pan'; x0: number; y0: number; sx: number; sy: number }
     | null = null
+  /** Vrai des que la souris a bouge pendant le geste : sert a distinguer
+      un clic droit (menu) d'un glisser droit (gomme). */
+  private moved = false
 
   constructor(private ctx: Ctx, chId: string) {
     this.chId = chId
@@ -231,13 +236,30 @@ export class PianoRoll {
       return { x: e.clientX - r.left, y: e.clientY - r.top }
     }
 
+    // Le clic droit est un outil (gomme) : le menu systeme n'apparait jamais.
+    // Notre menu, lui, s'ouvre au relachement d'un clic droit immobile.
     cv.addEventListener('contextmenu', (e) => e.preventDefault())
+    cv.addEventListener('pointerup', (e) => {
+      if (e.button !== 2 || this.moved) return
+      const { x, y } = pos(e)
+      const hit = y <= cv.clientHeight - VEL_H ? this.hit(x, y) : null
+      this.rollMenu(e, hit?.note ?? null)
+    })
 
     cv.addEventListener('pointerdown', (e) => {
       const { x, y } = pos(e)
       const H = cv.clientHeight
       const gridH = H - VEL_H
+      this.moved = false
       cv.setPointerCapture(e.pointerId)
+
+      // Clic milieu : on deplace la vue. Indispensable des qu'on zoome.
+      if (e.button === 1) {
+        e.preventDefault()
+        this.dragState = { kind: 'pan', x0: x, y0: y, sx: this.scrollX, sy: this.scrollY }
+        cv.style.cursor = 'grabbing'
+        return
+      }
 
       // clavier : preecoute
       if (x < KEY_W && y < gridH) {
@@ -262,10 +284,13 @@ export class PianoRoll {
       const erase = this.mode === 'erase' || e.button === 2 || e.altKey
 
       if (hit && erase) {
+        // On ne supprime pas tout de suite : si la souris ne bouge pas,
+        // c'est un clic droit, et il ouvre le menu de la note.
+        if (e.button === 2) { this.dragState = { kind: 'paint', last: -1, pending: hit.note }; return }
         const pat = this.pattern()
         pat.notes = pat.notes.filter((n) => n !== hit.note)
         this.ctx.markDirty(); this.draw()
-        this.dragState = { kind: 'paint', last: -1 }
+        this.dragState = { kind: 'paint', last: -1, pending: null }
         return
       }
       if (hit && hit.edge) {
@@ -273,11 +298,17 @@ export class PianoRoll {
         return
       }
       if (hit) {
-        this.dragState = { kind: 'move', note: hit.note, ox: x, oy: y, startT: hit.note.t, startKey: hit.note.key }
-        void this.ctx.engine.preview(this.chId, hit.note.key, hit.note.len, hit.note.vel)
+        // Maj + glisser duplique la note plutot que de la deplacer.
+        let note = hit.note
+        if (e.shiftKey) {
+          note = { ...hit.note, id: uid('n') }
+          this.pattern().notes.push(note)
+        }
+        this.dragState = { kind: 'move', note, ox: x, oy: y, startT: note.t, startKey: note.key }
+        void this.ctx.engine.preview(this.chId, note.key, note.len, note.vel)
         return
       }
-      if (erase) { this.dragState = { kind: 'paint', last: -1 }; return }
+      if (erase) { this.dragState = { kind: 'paint', last: -1, pending: null }; return }
 
       // nouvelle note
       const t = Math.max(0, Math.floor(this.xToStep(x)))
@@ -296,6 +327,13 @@ export class PianoRoll {
     cv.addEventListener('pointermove', (e) => {
       const { x, y } = pos(e)
       const st = this.dragState
+      if (e.buttons) this.moved = true
+      if (st?.kind === 'pan') {
+        this.scrollX = Math.max(0, st.sx - (x - st.x0))
+        this.scrollY = clamp(st.sy - (y - st.y0), 0, 97 * this.keyH)
+        this.draw()
+        return
+      }
       if (!st) {
         const hh = this.hit(x, y)
         const nn = hh?.note ?? null
@@ -320,18 +358,37 @@ export class PianoRoll {
         st.note.vel = clamp(1 - (y - gridH - 8) / (VEL_H - 16), 0.05, 1)
         this.ctx.markDirty(); this.draw()
       } else if (st.kind === 'paint') {
+        const pat = this.pattern()
+        // la note d'origine part des que le geste devient un glisser
+        if (st.pending) { pat.notes = pat.notes.filter((n) => n !== st.pending); st.pending = null }
         const hh = this.hit(x, y)
-        if (hh) {
-          const pat = this.pattern()
-          pat.notes = pat.notes.filter((n) => n !== hh.note)
-          this.ctx.markDirty(); this.draw()
-        }
+        if (hh) pat.notes = pat.notes.filter((n) => n !== hh.note)
+        this.ctx.markDirty(); this.draw()
       }
     })
 
-    const end = () => { if (this.dragState) { this.dragState = null; this.ctx.refresh('rack') } }
+    const end = () => {
+      if (!this.dragState) return
+      this.dragState = null
+      cv.style.cursor = 'crosshair'
+      this.ctx.refresh('rack')
+    }
     cv.addEventListener('pointerup', end)
     cv.addEventListener('pointercancel', end)
+
+    // Suppr / Retour arriere efface la note sous le curseur : c'est le
+    // geste le plus rapide quand on relit un motif a la souris.
+    window.addEventListener('keydown', (e) => {
+      if (e.key !== 'Delete' && e.key !== 'Backspace') return
+      if (!this.el.isConnected || !this.el.offsetParent || !this.hoverNote) return
+      const t = e.target as HTMLElement
+      if (t && /INPUT|TEXTAREA|SELECT/.test(t.tagName)) return
+      e.preventDefault()
+      const pat = this.pattern()
+      pat.notes = pat.notes.filter((n) => n !== this.hoverNote)
+      this.hoverNote = null
+      this.ctx.markDirty(); this.draw(); this.ctx.refresh('rack')
+    })
 
     cv.addEventListener('wheel', (e) => {
       e.preventDefault()
@@ -345,6 +402,58 @@ export class PianoRoll {
       }
       this.draw()
     }, { passive: false })
+  }
+
+  /* ---------------- menu contextuel ---------------- */
+
+  /** Clic droit immobile : sur une note, ses reglages ; sinon, les outils
+      du piano roll. Le clic droit maintenu, lui, reste la gomme. */
+  private rollMenu(ev: MouseEvent, note: Note | null) {
+    const c = this.ctx
+    const pat = this.pattern()
+    const items: MenuItem[] = note ? [
+      { label: 'Supprimer la note', ico: 'trash', danger: true, accel: 'Suppr', onClick: () => {
+        pat.notes = pat.notes.filter((n) => n !== note)
+        c.markDirty(); this.draw(); c.refresh('rack')
+      } },
+      { label: 'Dupliquer', ico: 'newdoc', accel: 'Maj+glisser', onClick: () => {
+        pat.notes.push({ ...note, id: uid('n'), t: note.t + note.len })
+        c.markDirty(); this.draw(); c.refresh('rack')
+      } },
+      '-',
+      { label: 'Longueur', ico: 'wave', sub: [1, 2, 4, 8, 16].map((l) => ({
+        label: l === 1 ? '1 pas' : `${l} pas`, checked: note.len === l,
+        onClick: () => { note.len = l; this.lastLen = l; c.markDirty(); this.draw() },
+      })) },
+      { label: 'Velocite', sub: [
+        { label: 'Douce (40)', onClick: () => { note.vel = 0.31; c.markDirty(); this.draw() } },
+        { label: 'Normale (85)', onClick: () => { note.vel = 0.67; c.markDirty(); this.draw() } },
+        { label: 'Forte (127)', onClick: () => { note.vel = 1; c.markDirty(); this.draw() } },
+      ] },
+      { label: 'Ecouter', ico: 'play', onClick: () => void c.engine.preview(this.chId, note.key, note.len, note.vel) },
+    ] : [
+      { label: 'Quantiser', ico: 'wand', onClick: () => this.quantize() },
+      { label: 'Arpege automatique', ico: 'wand', onClick: () => this.arp() },
+      '-',
+      { label: 'Transposer', ico: 'piano', sub: [
+        { label: '+ 1 octave', onClick: () => this.transpose(12) },
+        { label: '+ 1 demi-ton', onClick: () => this.transpose(1) },
+        { label: '− 1 demi-ton', onClick: () => this.transpose(-1) },
+        { label: '− 1 octave', onClick: () => this.transpose(-12) },
+      ] },
+      { label: 'Longueur par defaut', sub: [1, 2, 4, 8, 16].map((l) => ({
+        label: l === 1 ? '1 pas' : `${l} pas`, checked: this.lastLen === l,
+        onClick: () => { this.lastLen = l },
+      })) },
+      '-',
+      { label: 'Recentrer la vue', ico: 'screen', accel: 'clic milieu', onClick: () => {
+        this.scrollX = 0
+        this.scrollY = Math.max(0, (108 - 60) * this.keyH - 120)
+        this.draw()
+      } },
+      { label: 'Vider ce channel', ico: 'broom', danger: true, onClick: () => this.clearCh() },
+    ]
+    contextMenu(ev, items, { title: note ? keyName(note.key) : (c.channel(this.chId)?.name ?? 'Piano roll') })
   }
 
   /* ---------------- outils ---------------- */
