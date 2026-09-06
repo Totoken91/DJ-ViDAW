@@ -309,8 +309,104 @@ de couleur, navigation aux flèches, première lettre pour sauter à une entrée
 La tête de lecture ne dépend plus d'un `setTimeout` par pas : elle se déduit de
 l'horloge audio à chaque image, ce qui la rend exacte et supprime des centaines
 de timers par minute. Les canevas du piano roll et de la playlist ne sont
-redessinés que si leur fenêtre est réellement visible, et le redimensionnement
-est temporisé.
+redessinés que si leur fenêtre est réellement visible, le redimensionnement est
+temporisé, et l'onglet en arrière-plan ne peint rien du tout.
+
+**Ce qui ne change pas d'une image à l'autre est peint une fois.** Trois
+boucles de rendu le faisaient à chaque image :
+
+| Ce qui était refait 60 fois par seconde | Maintenant |
+|---|---|
+| Le vinyle des platines : 35 arcs, 3 dégradés, l'étiquette et son texte — deux fois, une par platine | Peint dans un canevas à part, puis simplement tourné |
+| La forme d'onde zoomée du mode DJ : 350 000 échantillons relus par image et par platine | Des pics calculés une fois au chargement, 400 colonnes par seconde |
+| La forme d'onde de la Nightcorification : 600 rectangles et 600 chaînes de couleur CSS analysées | Une silhouette et un dégradé, peints une fois |
+| La courbe d'égaliseur : 1 200 modules de filtre évalués | Recalculée seulement quand une bande bouge |
+
+Mesuré au navigateur (Chrome, `Performance.getMetrics`, sur 8 s de lecture
+réelle) :
+
+| Scène | Temps de script avant | après |
+|---|---|---|
+| Mode DJ, deux platines en lecture | **1 010 ms** (12,6 % du temps) | **259 ms** (3,2 %) |
+| Nightcorification, lecture + courbe d'EQ visible | **519 ms** | **288 ms** |
+
+Soit **−74 %** de travail JavaScript sur la scène la plus lourde, et le temps
+de tâche total qui passe de 70 % à 42 % du temps écoulé.
+
+### La marque
+
+Le nom du logiciel s'écrivait de six façons : un SVG chromé dans la barre du
+haut, du WordArt doré dans « À propos », du texte chromé dans le mixeur, un
+dégradé rose dans le mode DJ, un autre traitement au démarrage. Une marque qui
+change de forme à chaque écran n'est plus une marque.
+
+Il y a maintenant **un seul fichier** qui écrit le nom et **deux dessins**
+(`src/ui/brand.ts`) :
+
+- le **logotype** — le produit : disque + `DJ ViDAW`, décliné en taille, jamais
+  redessiné ailleurs ;
+- la **signature** — l'auteur : `DJ Viteau`, volontairement plate et rose, sans
+  chrome. On ne confond pas le nom du logiciel avec celui de la personne.
+
+La règle qui va avec : **le chrome et les dégradés de texte sont réservés à la
+marque.** Partout ailleurs un titre est plat. `.wordart` et `.chrome`, qui
+servaient à habiller n'importe quel libellé, ont disparu.
+
+Les dégradés du logotype portent un identifiant unique par instance : deux
+logos sur la même page (la barre du haut et l'écran de démarrage) partageaient
+jusqu'ici leurs `<defs>`.
+
+### La typographie
+
+Soixante-huit déclarations de police, quatorze corps différents, trois piles de
+familles écrites chacune à sa manière. Remplacées par **quinze styles nommés**
+dans `xp.css` :
+
+| Rôle | Token | Valeur |
+|---|---|---|
+| Étiquette gravée | `--t-micro` | 700 8px |
+| Libellé de commande | `--t-label` | 700 9px |
+| Bouton | `--t-btn` | 700 10px |
+| Texte courant | `--t-body` | 400 11px |
+| Titre de fenêtre | `--t-title` | 700 12px display |
+| Titre de module | `--t-display` | 900 15px display |
+| Afficheurs | `--t-num`, `--t-num-l`, `--t-num-xl` | chasse fixe |
+
+Trois familles, trois rôles : **Tahoma** pour l'interface, **Trebuchet** pour
+les titres de module, et de la **chasse fixe pour tout ce qui porte un
+chiffre** — un afficheur qui change de largeur en changeant de valeur n'est pas
+un afficheur.
+
+Les canevas ont la même règle, via `src/ui/type.ts`. Ce n'est pas de la
+coquetterie : un `Tahoma` nu tombe en serif sur la plupart des Linux, et la
+moitié des étiquettes dessinées au canevas se retrouvaient dans une police qui
+n'a rien à faire là.
+
+Vérifié dans le navigateur : l'application entière ne rend plus que **trois
+familles** — Tahoma, Courier New, Trebuchet MS.
+
+### Le mouvement et la géométrie
+
+- **Une seule courbe, trois durées** : `--d-fast` 90 ms, `--d-mid` 160 ms,
+  `--d-slow` 280 ms, sur `--ease`. Une interface où chaque élément a son propre
+  timing donne l'impression que rien n'est lié — il y avait douze durées
+  différentes, de 60 ms à 350 ms.
+- **Un seul langage de clic** : ce qu'on enfonce descend d'un pixel. Boutons du
+  rack, du synthé, des applets, pads du mode DJ.
+- **Poser un pas se voit** : la case gonfle un instant. C'est la différence
+  entre « ça a marché » et « je crois que ça a marché ».
+- **Quatre rayons** au lieu de douze : `--r-1` la commande minuscule, `--r-2` le
+  bouton, `--r-3` le panneau, `--r-4` la fenêtre. On avait 9px et 10px côte à
+  côte.
+- Tout reste désactivé sous `prefers-reduced-motion`.
+
+### Les états vides
+
+Un panneau vide dit maintenant toujours la même chose de la même façon : ce
+qu'on regarde, pourquoi c'est vide, et le geste qui remplit. Un seul composant
+(`emptyState`) sert au Channel Rack sans instrument, à l'insert sans effet, au
+navigateur de samples, à la Nightcorification et au mode DJ. Chaque module
+improvisait le sien — un cadre en pointillés ici, une ligne grise là.
 
 ### Le système de couleur
 
@@ -457,6 +553,8 @@ src/
 │  └─ samples.ts        décodage, pics d'affichage, détection de transitoires
 ├─ worklets/            bitcrusher et tap d'enregistrement (JS pur)
 ├─ ui/                  fenêtres, séquenceur, piano roll, playlist, mixeur…
+│  ├─ brand.ts          le nom et les deux dessins de la marque
+│  ├─ type.ts           les polices des canevas, alignées sur le CSS
 │  ├─ menu.ts           les menus contextuels partagés
 │  ├─ eqview.ts         la courbe d'EQ, manipulable au point
 │  ├─ dj.ts             la console DJ : plateaux, table, crossfader

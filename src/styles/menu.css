@@ -17,7 +17,7 @@
   outline: none;
   max-height: calc(100vh - 16px);
   overflow-y: auto;
-  animation: ctx-in 70ms ease-out;
+  animation: ctx-in var(--d-fast) var(--ease-out);
 }
 @keyframes ctx-in { from { opacity: 0; transform: translateY(-3px) } }
 @media (prefers-reduced-motion: reduce) { .ctxmenu { animation: none } }

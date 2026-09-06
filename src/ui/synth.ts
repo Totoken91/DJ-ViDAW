@@ -8,6 +8,7 @@
    ============================================================ */
 
 import { h, clear } from './dom'
+import { FONT } from './type'
 import { icon } from './icons'
 import { knob } from './knob'
 import { envEditor, scopeDisplay, waveThumb, lfoDisplay, type EnvEditor, type LfoView } from './widgets'
@@ -359,7 +360,7 @@ export class SynthPanel {
     g.fillStyle = '#0d1017'; g.fillRect(0, 0, W, H)
 
     // reperes de frequence
-    g.font = '16px "Courier New", monospace'
+    g.font = FONT.mono(16)
     for (const [hz, lbl] of [[100, '100'], [1000, '1k'], [10000, '10k']] as [number, string][]) {
       const x = (Math.log(hz / 20) / Math.log(950)) * W
       g.strokeStyle = 'rgba(255,255,255,.06)'; g.lineWidth = 2

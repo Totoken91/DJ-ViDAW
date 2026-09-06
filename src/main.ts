@@ -26,6 +26,7 @@ import { Viteau } from './ui/viteau'
 import { dialog, closeDialog, toast, Taskbar, Saver, desktopIcon, type MenuEntry } from './ui/shell'
 import { boot } from './ui/boot'
 import { icon } from './ui/icons'
+import { wordmark, signature, BRAND } from './ui/brand'
 import { installWallpaper } from './ui/wallpaper'
 import type { Ctx } from './ui/ctx'
 
@@ -511,7 +512,7 @@ function buildUI() {
      'Choisis une tranche, puis ajoute ses effets en dessous')
   mk('channel', 'Instrument', 'wrench', chEditor.el, 170, 74, 860, 620, () => chEditor.resize(),
      'F2 rouvre cette fenetre · sur un synthetiseur, le clavier de l\'ordinateur joue les notes')
-  mk('browser', 'Navigateur de samples', 'folder', browser.el, 120, 60, 390, 430, undefined,
+  mk('browser', 'Samples', 'folder', browser.el, 120, 60, 390, 430, undefined,
      'Glisse un fichier audio n\'importe ou sur le bureau pour l\'importer')
   mk('nightcore', 'Nightcorification', 'moon', nightcore.el, 190, 34, 890, 630, () => nightcore.refresh(),
      'Clic sur la forme d\'onde pour se placer · glisser pour tracer une boucle · clic droit pour l\'enlever')
@@ -570,7 +571,7 @@ function buildUI() {
     { icon: 'help', label: 'A propos', right: true, onClick: showAbout },
   ]
 
-  const taskbar = new Taskbar(entries, 'DJ Viteau')
+  const taskbar = new Taskbar(entries, BRAND.author)
   for (const win of wins.values()) {
     win.taskBtn = taskbar.addButton(win.opts.icon, win.opts.title, () => win.toggle())
     win.opts.onClose = () => { /* le bouton reste, il rouvre la fenetre */ }
@@ -752,17 +753,19 @@ function showHelp() {
 
 function showAbout() {
   dialog({
-    title: 'A propos de DJ ViDAW', icon: 'disk',
+    title: `A propos de ${BRAND.name}`, icon: 'disk',
     body: h('div', {},
-      h('div', { class: 'wordart', style: { fontSize: '26px', marginBottom: '8px' } }, 'DJ ViDAW 1.0'),
-      h('p', { style: { margin: '0 0 8px' } }, 'Station de travail audionumerique concue par ', h('b', {}, 'DJ Viteau'), '.'),
+      h('div', { class: 'brand about-mark', html: wordmark({ h: 56 }) }),
+      h('div', { class: 'about-ver' }, `Version ${BRAND.version} — build ${BRAND.build}`),
+      h('p', { style: { margin: '0 0 8px' } }, 'Station de travail audionumerique concue par ',
+        h('span', { class: 'brand about-sign', html: signature(17) }), '.'),
       h('p', { style: { margin: '0 0 8px' } },
         'Tout le son est fabrique en direct par le navigateur : percussions synthetisees, ',
         'synthetiseur soustractif, sampler avec decoupe, neuf effets et un export WAV rendu hors-ligne.'),
       h('p', { style: { margin: '0 0 8px', fontSize: '10px', color: '#555' } },
         'Aucune donnee ne quitte ta machine. Aucun fichier audio n\'est embarque : ',
         'tout est genere par des oscillateurs, comme en 2001.'),
-      h('p', { style: { margin: '0', fontStyle: 'italic' } }, '« Si ca clippe, c\'est que c\'est bien. » — DJ Viteau'),
+      h('p', { style: { margin: '0', fontStyle: 'italic' } }, `« Si ca clippe, c'est que c'est bien. » — ${BRAND.author}`),
     ),
   })
 }
@@ -915,6 +918,9 @@ const shown = (id: string) => {
 let lastStep = -2
 let lastInfo = ''
 function loop() {
+  // Onglet en arriere-plan : le navigateur ralentit deja rAF, mais tant
+  // qu'a etre appele, autant ne rien peindre.
+  if (document.hidden) { requestAnimationFrame(loop); return }
   transport.scope.draw()
   if (shown('mixer')) mixer.tick()
 

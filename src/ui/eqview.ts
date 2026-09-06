@@ -10,6 +10,7 @@
    ============================================================ */
 
 import { h } from './dom'
+import { FONT } from './type'
 import { contextMenu } from './menu'
 import { clamp } from '../core/state'
 import {
@@ -26,6 +27,8 @@ export const BAND_COLORS = ['#ff5cb0', '#ffa54d', '#8ee06a', '#5fe6ff', '#b48cff
 export interface EqView {
   el: HTMLElement
   draw(): void
+  /** Signale que les bandes ont change hors de la vue. */
+  invalidate(): void
   setAnalyser(a: AnalyserNode | null): void
   /** Bande survolee ou attrapee, pour l'afficheur en dessous. */
   active: number
@@ -50,6 +53,13 @@ export function eqView(opts: {
 
   const axis = eqFreqAxis(240, F_LO, F_HI)
   const curve = new Float32Array(axis.length)
+  /* La courbe ne bouge que si une bande bouge. Le spectre, lui, est
+     repeint a chaque image : inutile de recalculer 1 200 modules de
+     filtre soixante fois par seconde pour un trace identique. */
+  let curveDirty = true
+  let curvePath: Path2D | null = null
+  let lastW = 0, lastH = 0
+  const touch = () => { curveDirty = true }
 
   /* --- conversions --- */
   const xOf = (f: number, w: number) => (Math.log(f / F_LO) / Math.log(F_HI / F_LO)) * w
@@ -111,7 +121,7 @@ export function eqView(opts: {
     }
 
     /* --- grille --- */
-    g.font = '9px "Courier New", monospace'
+    g.font = FONT.mono(9)
     g.textBaseline = 'top'
     for (const f of [30, 50, 100, 200, 300, 500, 1000, 2000, 3000, 5000, 10000, 15000]) {
       const x = xOf(f, w)
@@ -137,35 +147,33 @@ export function eqView(opts: {
     g.fillText(`+${DB}`, 4, 3 + 11)
 
     /* --- courbe totale --- */
-    const r = eqResponse(opts.bands, axis, sampleRate)
-    curve.set(r)
-    g.beginPath()
-    for (let i = 0; i < axis.length; i++) {
-      const x = xOf(axis[i], w), y = yOf(r[i], hh)
-      if (i === 0) g.moveTo(x, y); else g.lineTo(x, y)
+    if (curveDirty || w !== lastW || hh !== lastH || !curvePath) {
+      curve.set(eqResponse(opts.bands, axis, sampleRate))
+      const path = new Path2D()
+      for (let i = 0; i < axis.length; i++) {
+        const x = xOf(axis[i], w), y = yOf(curve[i], hh)
+        if (i === 0) path.moveTo(x, y); else path.lineTo(x, y)
+      }
+      curvePath = path
+      curveDirty = false
+      lastW = w; lastH = hh
     }
     // remplissage entre la courbe et le zero : on voit d'un coup ce qui
     // est ajoute et ce qui est retire
-    g.save()
-    g.lineTo(w, y0); g.lineTo(0, y0); g.closePath()
+    const fill = new Path2D(curvePath)
+    fill.lineTo(w, y0); fill.lineTo(0, y0); fill.closePath()
     const cg = g.createLinearGradient(0, 0, 0, hh)
     cg.addColorStop(0, 'rgba(255,92,176,.30)')
     cg.addColorStop(.5, 'rgba(255,92,176,.10)')
     cg.addColorStop(1, 'rgba(95,230,255,.26)')
     g.fillStyle = cg
-    g.fill()
-    g.restore()
+    g.fill(fill)
 
-    g.beginPath()
-    for (let i = 0; i < axis.length; i++) {
-      const x = xOf(axis[i], w), y = yOf(r[i], hh)
-      if (i === 0) g.moveTo(x, y); else g.lineTo(x, y)
-    }
     g.strokeStyle = '#ffd9ef'
     g.lineWidth = 2
     g.shadowColor = 'rgba(255,92,176,.75)'
     g.shadowBlur = 7
-    g.stroke()
+    g.stroke(curvePath)
     g.shadowBlur = 0
 
     /* --- points de bande --- */
@@ -182,13 +190,13 @@ export function eqView(opts: {
       g.strokeStyle = act ? '#fff' : 'rgba(0,0,0,.65)'
       g.stroke()
       g.fillStyle = '#0d0a1d'
-      g.font = '700 9px Tahoma, "DejaVu Sans", sans-serif'
+      g.font = FONT.ui(9, 700)
       g.textAlign = 'center'; g.textBaseline = 'middle'
       g.fillText(String(i + 1), x, y + .5)
       g.textAlign = 'left'; g.textBaseline = 'top'
       if (act) {
         const lbl = `${BAND_NAMES[i]} ${Math.round(b.f)}Hz ${b.g > 0 ? '+' : ''}${b.g.toFixed(1)}dB`
-        g.font = '9px "Courier New", monospace'
+        g.font = FONT.mono(9)
         const tw = g.measureText(lbl).width + 8
         const tx = clamp(x - tw / 2, 2, w - tw - 2)
         const ty = clamp(y - 24, 2, hh - 16)
@@ -216,7 +224,7 @@ export function eqView(opts: {
       return
     }
     if (e.button === 1) {           // clic milieu : bande a plat
-      if (i >= 0) { e.preventDefault(); opts.bands[i].g = 0; opts.onChange(i); draw() }
+      if (i >= 0) { e.preventDefault(); opts.bands[i].g = 0; touch(); opts.onChange(i); draw() }
       return
     }
     if (i < 0) return
@@ -245,6 +253,7 @@ export function eqView(opts: {
       b.g = clamp(b.g + (dbOf(y, hh) - b.g) * fine, EQ_MIN_DB, EQ_MAX_DB)
     }
     if (!b.on) b.on = true
+    touch()
     opts.onChange(grab)
     draw()
   })
@@ -263,7 +272,7 @@ export function eqView(opts: {
     const i = nodeAt(x, y, w, hh)
     if (i < 0) return
     opts.bands[i].g = 0
-    opts.onChange(i); draw()
+    touch(); opts.onChange(i); draw()
   })
 
   cv.addEventListener('wheel', (e) => {
@@ -279,7 +288,7 @@ export function eqView(opts: {
     } else {
       b.q = clamp(b.q * (e.deltaY > 0 ? 0.88 : 1.14), 0.15, 18)
     }
-    opts.onChange(i); draw()
+    touch(); opts.onChange(i); draw()
   }, { passive: false })
 
   cv.addEventListener('contextmenu', (e) => e.preventDefault())
@@ -289,27 +298,29 @@ export function eqView(opts: {
     const shelf = b.type === 'lowshelf' || b.type === 'highshelf'
     contextMenu(e, [
       { label: b.on ? 'Desactiver la bande' : 'Activer la bande', ico: 'plug', checked: b.on,
-        onClick: () => { b.on = !b.on; opts.onChange(i); draw() } },
+        onClick: () => { b.on = !b.on; touch(); opts.onChange(i); draw() } },
       { label: 'Remettre a plat', ico: 'loop', accel: 'double-clic',
-        onClick: () => { b.g = 0; opts.onChange(i); draw() } },
+        onClick: () => { b.g = 0; touch(); opts.onChange(i); draw() } },
       '-',
       { label: 'Largeur', ico: 'wave', disabled: shelf, sub: [
-        { label: 'Tres large (0.4)', checked: Math.abs(b.q - 0.4) < .05, onClick: () => { b.q = 0.4; opts.onChange(i); draw() } },
-        { label: 'Large (0.8)', checked: Math.abs(b.q - 0.8) < .05, onClick: () => { b.q = 0.8; opts.onChange(i); draw() } },
-        { label: 'Moyenne (1.5)', checked: Math.abs(b.q - 1.5) < .05, onClick: () => { b.q = 1.5; opts.onChange(i); draw() } },
-        { label: 'Etroite (4)', checked: Math.abs(b.q - 4) < .2, onClick: () => { b.q = 4; opts.onChange(i); draw() } },
-        { label: 'Chirurgicale (10)', checked: b.q > 8, onClick: () => { b.q = 10; opts.onChange(i); draw() } },
+        { label: 'Tres large (0.4)', checked: Math.abs(b.q - 0.4) < .05, onClick: () => { touch(); b.q = 0.4; touch(); opts.onChange(i); draw() } },
+        { label: 'Large (0.8)', checked: Math.abs(b.q - 0.8) < .05, onClick: () => { touch(); b.q = 0.8; touch(); opts.onChange(i); draw() } },
+        { label: 'Moyenne (1.5)', checked: Math.abs(b.q - 1.5) < .05, onClick: () => { touch(); b.q = 1.5; touch(); opts.onChange(i); draw() } },
+        { label: 'Etroite (4)', checked: Math.abs(b.q - 4) < .2, onClick: () => { touch(); b.q = 4; touch(); opts.onChange(i); draw() } },
+        { label: 'Chirurgicale (10)', checked: b.q > 8, onClick: () => { touch(); b.q = 10; touch(); opts.onChange(i); draw() } },
       ] },
       { label: 'Type', ico: 'wrench', sub: ([
         ['lowshelf', 'Plateau grave'], ['peaking', 'Cloche'], ['highshelf', 'Plateau aigu'],
       ] as [EqBand['type'], string][]).map(([t, l]) => ({
-        label: l, checked: b.type === t, onClick: () => { b.type = t; opts.onChange(i); draw() },
+        label: l, checked: b.type === t, onClick: () => { b.type = t; touch(); opts.onChange(i); draw() },
       })) },
     ], { title: `${i + 1} · ${BAND_NAMES[i]}` })
   }
 
   const view: EqView = {
     el, draw,
+    /** A appeler quand les bandes sont modifiees de l'exterieur (presets). */
+    invalidate: touch,
     setAnalyser(a) {
       analyser = a
       if (a) sampleRate = a.context.sampleRate

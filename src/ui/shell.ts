@@ -6,6 +6,7 @@
 
 import { h, clear } from './dom'
 import { icon } from './icons'
+import { BRAND } from './brand'
 
 /* ---------------- Boites de dialogue ---------------- */
 
@@ -46,6 +47,35 @@ export function dialog(o: {
 }
 
 export function closeDialog() { modalLayer?.classList.remove('on') }
+
+/* ------------------------------------------------------------------ */
+/* Etat vide                                                           */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Un panneau vide dit toujours la meme chose de la meme facon : ce
+ * qu'on regarde, pourquoi c'est vide, et le geste qui remplit. Avant,
+ * chaque module improvisait le sien — un cadre en pointilles ici, une
+ * ligne grise la, un gros titre ailleurs.
+ */
+export function emptyState(o: {
+  icon?: string
+  title: string
+  line?: string
+  action?: HTMLElement
+  /** Accepte le glisser-deposer : le cadre se marque au survol. */
+  drop?: boolean
+  onClick?: () => void
+}): HTMLElement {
+  const el = h('div', { class: `empty${o.drop ? ' empty-drop' : ''}` },
+    o.icon ? h('div', { class: 'empty-ic' }, icon(o.icon, 46)) : null,
+    h('div', { class: 'empty-title' }, o.title),
+    o.line ? h('div', { class: 'empty-line' }, o.line) : null,
+    o.action ? h('div', { class: 'empty-act' }, o.action) : null,
+  )
+  if (o.onClick) el.addEventListener('click', o.onClick)
+  return el
+}
 
 /* ---------------- Bulles d'aide ---------------- */
 
@@ -94,7 +124,7 @@ export class Saver {
     this.el.classList.add('on')
     this.items.forEach((i) => i.el.remove())
     this.items = []
-    const words = ['DJ ViDAW', '★ VITEAU ★', 'Y2K', '128 BPM', '♪ ♫ ♪']
+    const words = [BRAND.name, `★ ${BRAND.author} ★`, 'Y2K', '128 BPM', '♪ ♫ ♪']
     const cols = ['#00ff9c', '#ff4fd8', '#4fe9ff', '#ffd23d', '#ff6b3d']
     for (let i = 0; i < 4; i++) {
       const el = h('div', { class: 'dvd', style: { color: cols[i % cols.length] } }, words[i % words.length])

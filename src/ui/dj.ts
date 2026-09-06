@@ -7,9 +7,12 @@
    ============================================================ */
 
 import { h, clear } from './dom'
+import { FONT } from './type'
 import { icon } from './icons'
+import { signature, discMark } from './brand'
 import { knob, fader, meter } from './knob'
 import { contextMenu, type MenuItem } from './menu'
+import { emptyState } from './shell'
 import type { Ctx } from './ctx'
 import { clamp } from '../core/state'
 import { computePeaks } from '../audio/samples'
@@ -35,6 +38,9 @@ interface DeckUi {
   echo: number
   vinyl: number
   angle: number
+  /** Le disque, dessine une fois puis simplement tourne. */
+  disc: HTMLCanvasElement | null
+  discKey: string
 }
 
 export class DjMode {
@@ -70,9 +76,9 @@ export class DjMode {
       class: 'dj-btn rec', dataset: { tip: 'Enregistre la sortie de la table : les deux platines, EQ et filtres compris' },
       onclick: () => void this.toggleRec(),
     }, icon('rec', 12), 'ENREGISTRER LE MIX')
-    return h('div', { class: 'dj-bar' },
-      h('span', { class: 'dj-logo' }, 'DJ VITEAU'),
-      h('span', { class: 'dj-sub' }, 'deux platines, une table, aucune pitie'),
+    return h('div', { class: 'app-head dj-bar' },
+      h('span', { class: 'brand', html: signature(21) }),
+      h('span', { class: 'app-sub' }, 'deux platines, une table, aucune pitie'),
       h('div', { class: 'spacer' }),
       this.recEl,
       this.recBtn,
@@ -98,14 +104,14 @@ export class DjMode {
 
   private renderIntro() {
     clear(this.body)
-    this.body.appendChild(h('div', { class: 'dj-intro' },
-      h('div', { class: 'dj-intro-art' }, discSvg()),
-      h('b', {}, 'DEUX PLATINES T\'ATTENDENT'),
-      h('span', {}, 'Glisse un morceau sur une platine, ou choisis un sample deja importe.'),
-      h('div', { class: 'dj-intro-row' },
-        h('button', { class: 'dj-btn go', onclick: () => void this.boot() }, icon('power', 12), 'ALLUMER LA TABLE'),
-      ),
-    ))
+    const art = h('div', { class: 'dj-intro-art', html: discMark(58, true) })
+    const box = emptyState({
+      title: 'DEUX PLATINES T\'ATTENDENT',
+      line: 'Allume la table, puis glisse un morceau sur une platine — ou prends un sample deja importe.',
+      action: h('button', { class: 'dj-btn go', onclick: () => void this.boot() }, icon('power', 12), 'ALLUMER LA TABLE'),
+    })
+    box.prepend(art)
+    this.body.appendChild(box)
   }
 
   /** Le materiel n'existe qu'une fois le son autorise par le navigateur. */
@@ -279,6 +285,7 @@ export class DjMode {
       eq: { lo: 0, mid: 0, hi: 0 },
       kill: { lo: false, mid: false, hi: false },
       filter: 0, echo: 0, vinyl: 0, angle: 0,
+      disc: null, discKey: '',
     }
     this.ui[id] = ui
 
@@ -415,7 +422,7 @@ export class DjMode {
       track,
       h('span', { class: 'xf-side' }, 'B'),
       curveSel,
-      h('span', { class: 'dj-sub' }, 'double-clic pour recentrer · fleches gauche/droite'),
+      h('span', { class: 'app-sub' }, 'double-clic pour recentrer · fleches gauche/droite'),
     )
   }
 
@@ -640,7 +647,7 @@ export class DjMode {
 
     if (!d.buffer || !d.peaks) {
       g.fillStyle = 'rgba(150,140,190,.45)'
-      g.font = '10px Tahoma, "DejaVu Sans", sans-serif'
+      g.font = FONT.ui(10)
       g.textAlign = 'center'
       g.fillText('depose un morceau ici', w / 2, hh / 2 + 3)
       g.textAlign = 'left'
@@ -672,7 +679,7 @@ export class DjMode {
       const x = (c / d.duration) * w
       g.fillStyle = '#ffd489'
       g.fillRect(x, 0, 1, topH)
-      g.font = '700 8px Tahoma, "DejaVu Sans", sans-serif'
+      g.font = FONT.ui(8, 700)
       g.fillText(String(i + 1), x + 2, 9)
     })
     g.fillStyle = 'rgba(255,255,255,.5)'
@@ -695,25 +702,28 @@ export class DjMode {
       g.fillStyle = bar ? 'rgba(255,255,255,.30)' : 'rgba(255,255,255,.11)'
       g.fillRect(x, zoomY, bar ? 2 : 1, zoomH)
     }
-    // onde
-    const ch = d.buffer.getChannelData(0)
-    const rate = d.buffer.sampleRate
-    g.fillStyle = col
-    for (let x = 0; x < w; x++) {
-      const ta = t0 + (x / w) * span
-      const s0 = Math.floor(ta * rate)
-      const s1 = Math.floor((ta + span / w) * rate)
-      if (s1 <= 0 || s0 >= ch.length) continue
-      let mn = 0, mx = 0
-      for (let i = Math.max(0, s0); i < Math.min(ch.length, s1); i += 2) {
-        const v = ch[i]
-        if (v < mn) mn = v
-        if (v > mx) mx = v
-      }
+    // onde, lue dans les pics calcules au chargement
+    const fine = d.zoom
+    const perSec = d.zoomRate
+    if (fine && perSec > 0) {
+      const nCols = fine.length / 2
       const mid = zoomY + zoomH / 2
-      const y0 = mid - mx * (zoomH / 2 - 1)
-      const y1 = mid - mn * (zoomH / 2 - 1)
-      g.fillRect(x, y0, 1, Math.max(1, y1 - y0))
+      const amp = zoomH / 2 - 1
+      g.fillStyle = col
+      for (let x = 0; x < w; x++) {
+        const ta = t0 + (x / w) * span
+        const c0 = Math.floor(ta * perSec)
+        const c1 = Math.floor((ta + span / w) * perSec)
+        if (c1 < 0 || c0 >= nCols) continue
+        let mn = 0, mx = 0
+        for (let i = Math.max(0, c0); i <= Math.min(nCols - 1, c1); i++) {
+          const a = fine[i * 2], b = fine[i * 2 + 1]
+          if (a < mn) mn = a
+          if (b > mx) mx = b
+        }
+        const y0 = mid - mx * amp
+        g.fillRect(x, y0, 1, Math.max(1, (mid - mn * amp) - y0))
+      }
     }
     if (d.loop) {
       const xa = ((d.loop.a - t0) / span) * w, xb = ((d.loop.b - t0) / span) * w
@@ -724,26 +734,21 @@ export class DjMode {
     g.fillRect(w / 2 - 1, zoomY, 2, zoomH)
   }
 
-  private paintPlatter(ui: DeckUi) {
-    const cv = ui.platter, d = ui.deck
+  /** Le disque lui-meme : sillons, etiquette, reflet. Il ne change que
+      si le morceau change, alors on le peint une fois dans un canevas a
+      part. Avant, c'etaient trente-cinq arcs et trois degrades par image
+      et par platine — pour un dessin rigoureusement identique. */
+  private discCanvas(ui: DeckUi): HTMLCanvasElement {
+    const d = ui.deck
+    const key = `${d.id}|${d.name}`
+    if (ui.disc && ui.discKey === key) return ui.disc
+    const S = ui.platter.width
+    const cv = document.createElement('canvas')
+    cv.width = S; cv.height = S
     const g = cv.getContext('2d')!
-    const S = cv.width
     const c = S / 2
-    g.clearRect(0, 0, S, S)
-
     const col = d.id === 'A' ? '#ff5cb0' : '#5fe6ff'
-    const ang = ui.angle
 
-    /* --- socle --- */
-    g.beginPath(); g.arc(c, c, c - 3, 0, Math.PI * 2)
-    const base = g.createLinearGradient(0, 0, 0, S)
-    base.addColorStop(0, '#3a3550'); base.addColorStop(1, '#151221')
-    g.fillStyle = base; g.fill()
-    g.lineWidth = 3; g.strokeStyle = '#0a0814'; g.stroke()
-
-    /* --- le disque : des sillons, pas un aplat --- */
-    g.save()
-    g.translate(c, c); g.rotate(ang); g.translate(-c, -c)
     g.beginPath(); g.arc(c, c, c - 10, 0, Math.PI * 2)
     const vin = g.createRadialGradient(c, c, c * 0.2, c, c, c)
     vin.addColorStop(0, '#232030'); vin.addColorStop(0.7, '#12101c'); vin.addColorStop(1, '#0a0812')
@@ -758,21 +763,45 @@ export class DjMode {
     g.ellipse(c - c * 0.3, c - c * 0.34, c * 0.5, c * 0.14, -0.7, 0, Math.PI * 2)
     g.fillStyle = 'rgba(255,255,255,.05)'; g.fill()
 
-    // etiquette
     g.beginPath(); g.arc(c, c, c * 0.33, 0, Math.PI * 2)
     const lab = g.createLinearGradient(0, c - c * 0.33, 0, c + c * 0.33)
     lab.addColorStop(0, col); lab.addColorStop(1, shade(col, -0.45))
     g.fillStyle = lab; g.fill()
     g.strokeStyle = 'rgba(0,0,0,.5)'; g.lineWidth = 2; g.stroke()
     g.fillStyle = 'rgba(0,0,0,.75)'
-    g.font = `700 ${Math.round(S * 0.13)}px Trebuchet MS, Tahoma, sans-serif`
+    g.font = FONT.display(Math.round(S * 0.13), 700)
     g.textAlign = 'center'; g.textBaseline = 'middle'
     g.fillText(d.id, c, c - S * 0.03)
-    g.font = `${Math.round(S * 0.045)}px Tahoma, "DejaVu Sans", sans-serif`
+    g.font = FONT.ui(Math.round(S * 0.045))
     g.fillText((d.name || 'VIDE').slice(0, 14).toUpperCase(), c, c + S * 0.06)
-    // repere de rotation
     g.fillStyle = 'rgba(255,255,255,.85)'
     g.fillRect(c - 1.5, c - c * 0.33 - 14, 3, 12)
+
+    ui.disc = cv
+    ui.discKey = key
+    return cv
+  }
+
+  private paintPlatter(ui: DeckUi) {
+    const cv = ui.platter, d = ui.deck
+    const g = cv.getContext('2d')!
+    const S = cv.width
+    const c = S / 2
+    g.clearRect(0, 0, S, S)
+
+    const col = d.id === 'A' ? '#ff5cb0' : '#5fe6ff'
+
+    /* --- socle --- */
+    g.beginPath(); g.arc(c, c, c - 3, 0, Math.PI * 2)
+    const base = g.createLinearGradient(0, 0, 0, S)
+    base.addColorStop(0, '#3a3550'); base.addColorStop(1, '#151221')
+    g.fillStyle = base; g.fill()
+    g.lineWidth = 3; g.strokeStyle = '#0a0814'; g.stroke()
+
+    /* --- le disque, tourne --- */
+    g.save()
+    g.translate(c, c); g.rotate(ui.angle); g.translate(-c, -c)
+    g.drawImage(this.discCanvas(ui), 0, 0)
     g.restore()
 
     /* --- axe --- */
@@ -791,7 +820,6 @@ export class DjMode {
       g.beginPath(); g.arc(c, c, c - 6, 0, Math.PI * 2)
       g.strokeStyle = 'rgba(255,255,255,.65)'; g.lineWidth = 2; g.stroke()
     }
-    g.textAlign = 'left'; g.textBaseline = 'alphabetic'
   }
 
   /* ---------------- boucle d'animation ---------------- */
@@ -903,20 +931,4 @@ function shade(hex: string, amt: number): string {
   const n = parseInt(m.length === 3 ? m.split('').map((c) => c + c).join('') : m, 16)
   const f = (v: number) => Math.max(0, Math.min(255, Math.round(v * (1 + amt))))
   return `rgb(${f((n >> 16) & 255)},${f((n >> 8) & 255)},${f(n & 255)})`
-}
-
-/** Le disque de l'ecran d'accueil. */
-function discSvg(): HTMLElement {
-  const wrap = document.createElement('span')
-  wrap.className = 'icw'
-  wrap.innerHTML = `<svg width="64" height="64" viewBox="0 0 64 64" aria-hidden="true">
-    <defs><radialGradient id="dv" cx="38%" cy="34%">
-      <stop offset="0" stop-color="#3a3550"/><stop offset="70%" stop-color="#141020"/><stop offset="100%" stop-color="#0a0812"/>
-    </radialGradient></defs>
-    <circle cx="32" cy="32" r="30" fill="url(#dv)" stroke="#0a0814" stroke-width="2"/>
-    ${[26, 22, 18, 14].map((r) => `<circle cx="32" cy="32" r="${r}" fill="none" stroke="rgba(255,255,255,.07)"/>`).join('')}
-    <circle cx="32" cy="32" r="10" fill="#ff5cb0"/>
-    <circle cx="32" cy="32" r="2" fill="#0a0812"/>
-  </svg>`
-  return wrap
 }

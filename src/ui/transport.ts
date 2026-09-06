@@ -5,7 +5,8 @@
    ============================================================ */
 
 import { h, drag, clear } from './dom'
-import { icon, logoSVG } from './icons'
+import { icon } from './icons'
+import { wordmark, BRAND } from './brand'
 import { knob } from './knob'
 import { Scope } from './scope'
 import type { Ctx } from './ctx'
@@ -73,13 +74,13 @@ export class Transport {
         h('span', { class: 'tb-cap' }, label))
 
     this.el = h('div', { id: 'topbar' },
-      h('div', { class: 'tb-logo', title: 'DJ ViDAW — station audionumerique', html: logoSVG() }),
+      h('div', { class: 'tb-logo', title: `${BRAND.name} — ${BRAND.tagline.toLowerCase()}`, html: wordmark({ h: 48 }) }),
       group('TRANSPORT', this.playBtn, this.songBtn, stopBtn, recBtn),
       group('TEMPO', this.bpmEl, this.posEl, swing),
       group('SORTIE', master, scopeBox),
       group('MOTIF COURANT', this.patSel),
       h('div', { class: 'marquee' }, h('span', {},
-        '★ DJ ViDAW v1.0 ★ le studio qui tient dans un onglet ★ concu par DJ Viteau dans un garage a Aulnay ★ ' +
+        `★ ${BRAND.name} v${BRAND.version} ★ le studio qui tient dans un onglet ★ concu par ${BRAND.author} dans un garage a Aulnay ★ ` +
         'compatible Pentium III ★ ne pas ecouter a plus de 11 sur 10 ★ appuyez sur ESPACE pour lancer le son ★ ' +
         'meilleur vu en 1024x768 ★ signez mon livre d\'or ★')),
       h('button', { class: 'btn hot', onclick: onExport, title: 'Rendu audio' }, icon('floppy'), 'EXPORTER'),

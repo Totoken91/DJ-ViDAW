@@ -6,6 +6,7 @@
 
 import { h, clear } from './dom'
 import { icon } from './icons'
+import { emptyState } from './shell'
 import type { Ctx } from './ctx'
 import type { StoredSample } from '../audio/samples'
 import { makeChannel } from '../core/state'
@@ -25,11 +26,12 @@ export class Browser {
       ;(input as HTMLInputElement).value = ''
     })
 
-    const drop = h('div', { class: 'drop', onclick: () => input.click() },
-      icon('folder', 30),
-      h('div', {}, 'GLISSE TES FICHIERS AUDIO ICI'),
-      h('div', { style: { fontWeight: '400', opacity: '.7', marginTop: '4px' } }, 'wav · mp3 · ogg · flac · ou clique'),
-    )
+    const drop = emptyState({
+      icon: 'folder', drop: true,
+      title: 'GLISSE TES FICHIERS AUDIO ICI',
+      line: 'wav · mp3 · ogg · flac — ou clique pour choisir.',
+      onClick: () => input.click(),
+    })
 
     const stop = (e: Event) => { e.preventDefault(); e.stopPropagation() }
     for (const t of ['dragenter', 'dragover']) drop.addEventListener(t, (e) => { stop(e); drop.classList.add('hover') })

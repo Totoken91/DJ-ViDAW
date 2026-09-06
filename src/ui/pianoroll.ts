@@ -5,6 +5,7 @@
    ============================================================ */
 
 import { h } from './dom'
+import { FONT } from './type'
 import { icon } from './icons'
 import { contextMenu, type MenuItem } from './menu'
 import type { Ctx } from './ctx'
@@ -180,7 +181,7 @@ export class PianoRoll {
         g.strokeRect(0.5, y + 0.5, KEY_W - 1, this.keyH - 2)
       }
       if (k % 12 === 0) {
-        g.fillStyle = '#6d778b'; g.font = '8px Tahoma, sans-serif'
+        g.fillStyle = '#6d778b'; g.font = FONT.ui(8)
         g.fillText(keyName(k), KEY_W - 22, y + this.keyH - 3)
       }
     }
@@ -188,7 +189,7 @@ export class PianoRoll {
     // bandeau de velocite
     g.fillStyle = '#171a21'; g.fillRect(0, gridH, W, VEL_H)
     g.strokeStyle = '#313743'; g.beginPath(); g.moveTo(0, gridH + 0.5); g.lineTo(W, gridH + 0.5); g.stroke()
-    g.fillStyle = '#6d778b'; g.font = 'bold 8px Tahoma, sans-serif'
+    g.fillStyle = '#6d778b'; g.font = FONT.ui(8, 700)
     g.fillText('VELOCITE', 4, gridH + 12)
     for (const n of this.notes()) {
       const x = this.stepToX(n.t) + 1

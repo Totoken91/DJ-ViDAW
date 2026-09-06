@@ -15,6 +15,7 @@
 import { h, clear } from './dom'
 import { icon } from './icons'
 import { contextMenu, type MenuItem } from './menu'
+import { emptyState } from './shell'
 import type { Ctx } from './ctx'
 import type { Channel, Note, DrumKind } from '../core/state'
 import { uid, patternSteps, makeChannel, clamp, DRUM_KINDS, CH_COLORS, CH_COLOR_NAMES } from '../core/state'
@@ -191,8 +192,11 @@ export class Rack {
     }
 
     if (!c.project.channels.length) {
-      this.scroll.appendChild(h('div', { class: 'hint', style: { padding: '20px', textAlign: 'center' } },
-        'Aucun channel. Ajoute-en un avec le menu « + AJOUTER » en haut.'))
+      this.scroll.appendChild(emptyState({
+        icon: 'rack',
+        title: 'AUCUN INSTRUMENT',
+        line: 'Ajoute-en un avec le menu « + AJOUTER » en haut, ou fais un clic droit ici.',
+      }))
     }
   }
 

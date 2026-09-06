@@ -7,6 +7,7 @@
    ============================================================ */
 
 import { h } from './dom'
+import { FONT } from './type'
 import { icon } from './icons'
 import { contextMenu, type MenuItem } from './menu'
 import type { Ctx } from './ctx'
@@ -183,14 +184,14 @@ export class Playlist {
         const ny = y + hh - 3 - ((n.key - 36) / 60) * (hh - 6)
         if (nx > x && nx < x + w) g.fillRect(nx, clamp(ny, y + 1, y + hh - 3), 2, 2)
       }
-      g.fillStyle = '#000'; g.font = 'bold 9px Tahoma, sans-serif'
+      g.fillStyle = '#000'; g.font = FONT.ui(9, 700)
       if (w > 34) g.fillText(pat.name.slice(0, Math.floor(w / 6)), x + 4, y + 11)
     }
 
     // regle
     g.fillStyle = '#2b3140'; g.fillRect(0, 0, W, RULER_H)
     g.strokeStyle = '#12141a'; g.beginPath(); g.moveTo(0, RULER_H - .5); g.lineTo(W, RULER_H - .5); g.stroke()
-    g.font = 'bold 9px Tahoma, sans-serif'
+    g.font = FONT.ui(9, 700)
     for (let b = bar0; b < bar0 + bars; b++) {
       const x = HEAD_W + b * this.barW - this.scrollX
       if (x < HEAD_W) continue
@@ -207,11 +208,11 @@ export class Playlist {
       if (y + this.trackH < RULER_H) continue
       g.strokeStyle = '#12141a'
       g.beginPath(); g.moveTo(0, y + this.trackH - .5); g.lineTo(HEAD_W, y + this.trackH - .5); g.stroke()
-      g.fillStyle = '#98a2b4'; g.font = 'bold 9px Tahoma, sans-serif'
+      g.fillStyle = '#98a2b4'; g.font = FONT.ui(9, 700)
       g.fillText(`PISTE ${t + 1}`, 8, y + this.trackH / 2 + 3)
     }
     g.fillStyle = '#1d212a'; g.fillRect(0, 0, HEAD_W, RULER_H)
-    g.fillStyle = '#ef9c39'; g.font = 'bold 10px Tahoma, sans-serif'
+    g.fillStyle = '#ef9c39'; g.font = FONT.ui(10, 700)
     g.fillText('MESURE', 8, 14)
 
     // tete de lecture

@@ -31,7 +31,7 @@
   /* colonne flex : le corps peut alors s'etirer sur la hauteur de la rangee,
      ce qu'un conteneur en bloc ne permet pas */
   display: flex; flex-direction: column;
-  border: 1px solid #11151c; border-radius: 4px;
+  border: 1px solid #11151c; border-radius: var(--r-2);
   background:
     repeating-linear-gradient(90deg, rgba(255,255,255,.022) 0 1px, transparent 1px 3px),
     linear-gradient(180deg, var(--pl-hi), var(--pl-lo));
@@ -53,7 +53,7 @@
 .plate > h4 {
   flex: 0 0 auto;
   margin: 0; padding: 5px 22px 4px;
-  font: 700 9px/1.5 Tahoma, "DejaVu Sans", Verdana, sans-serif;
+  font: var(--t-label);
   letter-spacing: 2.4px; text-transform: uppercase;
   color: var(--engrave);
   text-shadow: 0 1px 0 rgba(255,255,255,.12), 0 -1px 0 rgba(0,0,0,.55);
@@ -71,7 +71,7 @@
 /* un puits sombre : tout ce qui affiche s'y enfonce */
 .well {
   background: var(--pl-deep);
-  border: 1px solid #0a0d12; border-radius: 3px;
+  border: 1px solid #0a0d12; border-radius: var(--r-2);
   box-shadow: inset 2px 2px 5px rgba(0,0,0,.75), 0 1px 0 rgba(255,255,255,.08);
   padding: 4px;
 }
@@ -83,7 +83,7 @@
   display: flex; flex-direction: column; justify-content: center; gap: 2px;
   padding: 7px 11px;
   background: linear-gradient(180deg, #1b1409, #100c06);
-  border: 1px solid #070502; border-radius: 3px;
+  border: 1px solid #070502; border-radius: var(--r-2);
   box-shadow: inset 0 0 18px rgba(255,170,50,.16), inset 2px 2px 5px rgba(0,0,0,.9);
   position: relative; overflow: hidden;
 }
@@ -93,11 +93,11 @@
   background: repeating-linear-gradient(0deg, rgba(0,0,0,.28) 0 1px, transparent 1px 2px);
 }
 .patch-lcd b {
-  font: 700 16px/1.15 "Courier New", monospace; letter-spacing: 1.4px;
+  font: var(--t-num-l); letter-spacing: 1.4px;
   color: #ffbe4d; text-shadow: 0 0 9px rgba(255,190,77,.6);
 }
 .patch-lcd i {
-  font: 400 9px/1.35 "Courier New", monospace; font-style: normal;
+  font: var(--t-num-r); font-style: normal;
   color: #b07f38; letter-spacing: .4px;
 }
 .patch-lcd .fam { color: #7e5d2a; font-size: 8px; letter-spacing: 2px; }
@@ -108,10 +108,10 @@
 .syn-fams { display: flex; flex-wrap: wrap; gap: 3px; align-content: center; max-width: 250px; }
 .syn-fam {
   padding: 3px 7px; cursor: pointer;
-  font: 700 8px/1.5 Tahoma, "DejaVu Sans", Verdana, sans-serif; letter-spacing: .9px;
+  font: var(--t-micro); letter-spacing: .9px;
   color: var(--syn-dim);
   background: linear-gradient(180deg, #333b49, #222833);
-  border: 1px solid #10141a; border-radius: 2px;
+  border: 1px solid #10141a; border-radius: var(--r-1);
   box-shadow: inset 0 1px 0 rgba(255,255,255,.07);
 }
 .syn-fam:hover { color: #e6ecf6; }
@@ -122,12 +122,12 @@
 }
 .syn-list {
   flex: 1 1 180px; min-width: 160px; max-height: 92px; overflow: auto;
-  background: var(--pl-deep); border: 1px solid #0a0d12; border-radius: 3px;
+  background: var(--pl-deep); border: 1px solid #0a0d12; border-radius: var(--r-2);
   box-shadow: inset 2px 2px 5px rgba(0,0,0,.7);
 }
 .syn-item {
   padding: 3px 9px; cursor: pointer;
-  font: 700 10px/1.55 Tahoma, "DejaVu Sans", Verdana, sans-serif; color: #b9c3d3;
+  font: var(--t-strong); color: #b9c3d3;
   border-bottom: 1px solid rgba(255,255,255,.035);
   display: flex; align-items: center; gap: 6px;
 }
@@ -158,12 +158,12 @@
 .osc-mod + .osc-mod { border-top: 1px solid rgba(0,0,0,.4); box-shadow: 0 -1px 0 rgba(255,255,255,.05); padding-top: 6px; }
 .osc-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .osc-tag {
-  font: 900 13px/1 "Trebuchet MS", Tahoma, sans-serif; letter-spacing: 1px;
+  font: var(--t-display-s); letter-spacing: 1px;
   color: #e7edf7; text-shadow: 0 1px 0 rgba(0,0,0,.6);
   width: 16px; text-align: center;
 }
 .wv-thumb {
-  display: block; border: 1px solid #0a0d12; border-radius: 2px;
+  display: block; border: 1px solid #0a0d12; border-radius: var(--r-1);
   box-shadow: inset 1px 1px 3px rgba(0,0,0,.75);
 }
 .syn-waves { display: flex; gap: 2px; }
@@ -171,7 +171,7 @@
   width: 25px; height: 21px; display: grid; place-items: center; cursor: pointer;
   color: #8e9cb3;
   background: linear-gradient(180deg, #333b49, #222833);
-  border: 1px solid #10141a; border-radius: 2px;
+  border: 1px solid #10141a; border-radius: var(--r-1);
   box-shadow: inset 0 1px 0 rgba(255,255,255,.07);
 }
 .syn-wave:hover { color: #fff; }
@@ -183,19 +183,19 @@
 
 /* ---------- Selecteurs et interrupteurs ---------- */
 .syn-pick {
-  font: 700 9px/1 Tahoma, "DejaVu Sans", Verdana, sans-serif;
+  font: var(--t-label);
   color: var(--syn-text);
   background: linear-gradient(180deg, #333b49, #232a36);
-  border: 1px solid #10141a; border-radius: 2px;
+  border: 1px solid #10141a; border-radius: var(--r-1);
   box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
   padding: 4px 5px; cursor: pointer;
 }
 .syn-toggle {
   display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
-  font: 700 9px/1 Tahoma, "DejaVu Sans", Verdana, sans-serif; color: #a9b6cb;
+  font: var(--t-label); color: #a9b6cb;
   padding: 5px 8px;
   background: linear-gradient(180deg, #333b49, #232a36);
-  border: 1px solid #10141a; border-radius: 2px;
+  border: 1px solid #10141a; border-radius: var(--r-1);
   box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
 }
 /* une vraie diode : eteinte elle reste visible, allumee elle rayonne peu */
@@ -219,14 +219,14 @@
 /* Deux canevas differents, deux noms : la courbe du filtre n'est pas une
    enveloppe, et les confondre a deja coute une fausse piste. */
 .env-cv, .filter-cv {
-  display: block; width: 100%; border: 1px solid #0a0d12; border-radius: 3px;
+  display: block; width: 100%; border: 1px solid #0a0d12; border-radius: var(--r-2);
   box-shadow: inset 2px 2px 5px rgba(0,0,0,.75);
 }
 
 /* ---------- Afficheur ---------- */
 .scope {
   flex: 1 1 auto; min-height: 118px; position: relative;
-  border: 1px solid #0a0d12; border-radius: 3px; overflow: hidden;
+  border: 1px solid #0a0d12; border-radius: var(--r-2); overflow: hidden;
   background: #080b11;
   box-shadow: inset 0 0 20px rgba(60,200,120,.06), inset 2px 2px 6px rgba(0,0,0,.85);
 }
@@ -245,12 +245,12 @@
 .scope-meta { flex: 0 0 auto; }
 .scope-meta {
   display: flex; justify-content: space-between; gap: 6px;
-  font: 400 9px/1.4 "Courier New", monospace; color: var(--syn-dim);
+  font: var(--t-num-r); color: var(--syn-dim);
 }
 .scope-meta b { color: #8fd7aa; font-weight: 700; }
 
 .lfo-cv {
-  display: block; border: 1px solid #0a0d12; border-radius: 2px;
+  display: block; border: 1px solid #0a0d12; border-radius: var(--r-1);
   box-shadow: inset 1px 1px 3px rgba(0,0,0,.75);
 }
 
@@ -258,7 +258,7 @@
 .syn-kbhost { flex: 0 0 auto; }
 .syn-keys {
   position: relative; height: 78px; flex: 0 0 auto; margin: 0 9px 9px;
-  border: 1px solid #0a0d12; border-radius: 3px; overflow: hidden;
+  border: 1px solid #0a0d12; border-radius: var(--r-2); overflow: hidden;
   background: #0b0e14; touch-action: none; user-select: none;
   box-shadow: inset 0 3px 8px rgba(0,0,0,.7);
 }
@@ -268,7 +268,7 @@
   background: linear-gradient(180deg, #fbfcfe 0 72%, #d6dae2 92%, #b9bec8 100%);
 }
 .syn-key.black {
-  top: 0; height: 61%; border: 1px solid #05070b; border-radius: 0 0 2px 2px;
+  top: 0; height: 61%; border: 1px solid #05070b; border-radius: 0 0 var(--r-1) var(--r-1);
   background: linear-gradient(180deg, #39404e 0 66%, #12161e 100%);
   box-shadow: 1px 2px 3px rgba(0,0,0,.55);
   z-index: 2;
@@ -277,12 +277,19 @@
 .syn-key.black.on { background: linear-gradient(180deg, #ffbe4d 0 70%, #a86f10 100%); }
 .syn-key .lbl {
   position: absolute; bottom: 3px; left: 0; right: 0; text-align: center;
-  font: 700 8px/1 Tahoma, "DejaVu Sans", Verdana, sans-serif; color: #7b8698; pointer-events: none;
+  font: var(--t-micro); color: #7b8698; pointer-events: none;
 }
 .syn-kbbar {
   display: flex; align-items: center; gap: 6px; padding: 0 9px 6px;
-  font: 400 9px/1.5 Tahoma, "DejaVu Sans", Verdana, sans-serif; color: var(--syn-dim);
+  font: var(--t-label-r); color: var(--syn-dim);
   flex-wrap: wrap;
 }
 .syn .knob-label { color: #8e9bb1; }
 .syn .knob-val { color: #ffbe4d; }
+
+/* Le meme langage de clic que le reste : on enfonce, ca descend. */
+.syn-pick, .syn-wave, .syn-fam, .syn-toggle {
+  transition: filter var(--d-fast) linear, transform var(--d-fast) var(--ease);
+}
+.syn-pick:hover, .syn-wave:hover, .syn-fam:hover { filter: brightness(1.18); }
+.syn-pick:active, .syn-wave:active, .syn-fam:active, .syn-toggle:active { transform: translateY(1px); }

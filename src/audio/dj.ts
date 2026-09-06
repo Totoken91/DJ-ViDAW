@@ -92,6 +92,25 @@ export function analyzeBeat(buf: AudioBuffer): BeatInfo {
   }
 }
 
+/** Pics min/max a resolution fixe (colonnes par seconde), calcules une
+    fois au chargement. C'est ce qui permet de repeindre la vue zoomee a
+    60 images par seconde sans relire le tampon. */
+function finePeaks(buf: AudioBuffer, perSec: number): Float32Array {
+  const cols = Math.max(1, Math.ceil(buf.duration * perSec))
+  const out = new Float32Array(cols * 2)
+  const d = buf.getChannelData(0)
+  const step = d.length / cols
+  for (let i = 0; i < cols; i++) {
+    const a = Math.floor(i * step)
+    const b = Math.min(d.length, Math.floor((i + 1) * step))
+    let mn = 0, mx = 0
+    for (let j = a; j < b; j++) { const v = d[j]; if (v < mn) mn = v; else if (v > mx) mx = v }
+    out[i * 2] = mn
+    out[i * 2 + 1] = mx
+  }
+  return out
+}
+
 /** Tampon lu a l'envers, pour le retour en arriere du plateau. */
 function reverseBuffer(ctx: BaseAudioContext, buf: AudioBuffer): AudioBuffer {
   const r = ctx.createBuffer(buf.numberOfChannels, buf.length, buf.sampleRate)
@@ -113,6 +132,12 @@ export class Deck {
   buffer: AudioBuffer | null = null
   private rev: AudioBuffer | null = null
   peaks: Float32Array | null = null
+  /** Pics fins pour la vue zoomee, en paires min/max.
+      Sans eux, dessiner huit secondes d'onde a chaque image relisait
+      350 000 echantillons soixante fois par seconde, par platine. */
+  zoom: Float32Array | null = null
+  /** Colonnes de `zoom` par seconde. */
+  zoomRate = 0
   beat: BeatInfo = { bpm: 120, offset: 0, confidence: 0 }
 
   playing = false
@@ -194,6 +219,8 @@ export class Deck {
     this.rev = null
     this.name = name
     this.peaks = peaks ?? null
+    this.zoomRate = 400
+    this.zoom = finePeaks(buf, this.zoomRate)
     this.beat = analyzeBeat(buf)
     this.anchorPos = 0
     this.anchorTime = this.ctx.currentTime

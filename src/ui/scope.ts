@@ -5,6 +5,7 @@
    ============================================================ */
 
 import { h } from './dom'
+import { FONT } from './type'
 
 type Mode = 'scope' | 'bars' | 'lissajous'
 
@@ -48,7 +49,7 @@ export class Scope {
     for (let y = 0; y < H; y += 2) for (let x = (y / 2) % 2; x < W; x += 2) g.fillRect(x, y, 1, 1)
 
     if (!this.analyser) {
-      g.fillStyle = '#2f6b4a'; g.font = 'bold 9px monospace'
+      g.fillStyle = '#2f6b4a'; g.font = FONT.mono(9, 700)
       g.fillText('NO SIGNAL', 6, H / 2)
       return
     }

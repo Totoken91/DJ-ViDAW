@@ -9,7 +9,7 @@
    ============================================================ */
 
 import { h, clear } from './dom'
-import { logoSVG } from './icons'
+import { wordmark, signature, BRAND } from './brand'
 
 interface PostLine { label: string; value: string; delay: number }
 
@@ -54,7 +54,7 @@ export function boot(onStart: () => void): HTMLElement {
     screen.className = 'boot-screen post'
     screen.append(
       h('div', { class: 'post-head' },
-        h('pre', {}, 'ViDAW BIOS v1.02\nCopyright (C) 2001, Viteau Systems Inc.'),
+        h('pre', {}, `ViDAW BIOS v1.02\nCopyright (C) 2001, ${BRAND.editor} Inc.`),
         h('div', { class: 'post-star', title: 'Energy Star' },
           h('div', { class: 'star-arc' }), h('span', {}, 'ENERGY'), h('b', {}, 'STAR')),
       ),
@@ -102,16 +102,16 @@ export function boot(onStart: () => void): HTMLElement {
     screen.appendChild(
       h('div', { class: 'sp-win' },
         h('div', { class: 'sp-art' },
-          h('div', { class: 'sp-logo', html: logoSVG() }),
-          h('div', { class: 'sp-ver' }, 'Version 1.0 — build 2001.09.06'),
+          h('div', { class: 'sp-logo', html: wordmark({ h: 56 }) }),
+          h('div', { class: 'sp-ver' }, `Version ${BRAND.version} — build ${BRAND.build}`),
         ),
         h('div', { class: 'sp-panel' },
           h('div', { class: 'sp-lic' },
             h('span', {}, 'Ce produit est concede sous licence a :'),
-            h('b', {}, 'DJ VITEAU'),
+            h('div', { class: 'sp-sign', html: signature(19) }),
             h('span', {}, 'Station audionumerique — 7 channels, 9 inserts')),
           bar, status, action,
-          h('div', { class: 'sp-copy' }, 'Copyright (C) 2001 Viteau Systems. Tous droits reserves. Ne pas ecouter au-dessus de 11 sur 10.'),
+          h('div', { class: 'sp-copy' }, `Copyright (C) 2001 ${BRAND.editor}. Tous droits reserves. Ne pas ecouter au-dessus de 11 sur 10.`),
         ),
       ),
     )
@@ -135,7 +135,7 @@ export function boot(onStart: () => void): HTMLElement {
       h('b', {}, 'Pret.'),
       document.createTextNode(' Le navigateur exige un clic avant d\'autoriser le son.'),
     )
-    const go = h('button', { class: 'xp-btn primary boot-go', type: 'button' }, 'Demarrer DJ ViDAW')
+    const go = h('button', { class: 'xp-btn primary boot-go', type: 'button' }, `Demarrer ${BRAND.name}`)
     go.addEventListener('click', onStart)
     action.appendChild(go)
     action.appendChild(h('span', { class: 'sp-kbd' }, 'ou appuie sur Entree'))

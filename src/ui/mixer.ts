@@ -8,6 +8,7 @@ import { h, clear } from './dom'
 import { icon } from './icons'
 import { knob, fader, meter } from './knob'
 import { contextMenu } from './menu'
+import { emptyState } from './shell'
 import type { Ctx } from './ctx'
 import type { FxType, FxSlot } from '../core/state'
 import { FX_DEFS, makeFx, clamp } from '../core/state'
@@ -131,15 +132,18 @@ export class Mixer {
     )
 
     this.fxEl.appendChild(h('div', { class: 'bar thin', style: { background: 'none', border: 'none', padding: '0 0 4px' } },
-      h('span', { class: 'chrome', style: { fontSize: '15px' } }, ins.name),
+      h('span', { class: 'app-title' }, ins.name),
       add,
       h('div', { class: 'spacer' }),
       h('span', { class: 'hint' }, 'double-clic sur un potard = valeur par defaut · clic droit = son menu'),
     ))
 
     if (!ins.fx.length) {
-      this.fxEl.appendChild(h('div', { class: 'hint', style: { textAlign: 'center', padding: '18px' } },
-        'Insert vide. Ajoute un BITCRUSH avec le menu ci-dessus, tu vas voir, c\'est rigolo.'))
+      this.fxEl.appendChild(emptyState({
+        icon: 'plug',
+        title: 'INSERT VIDE',
+        line: 'Ajoute un BITCRUSH avec le menu ci-dessus, tu vas voir, c\'est rigolo.',
+      }))
       return
     }
 

@@ -6,6 +6,7 @@
    ============================================================ */
 
 import { h, drag } from './dom'
+import { FONT } from './type'
 import { clamp } from '../core/state'
 import type { Env, Lfo, Wave } from '../audio/synth'
 import { LFO_DIVS } from '../audio/synth'
@@ -209,14 +210,14 @@ export function envEditor(
       g.fillStyle = '#0d1017'; g.fill()
       g.strokeStyle = color; g.lineWidth = 2; g.stroke()
       g.fillStyle = 'rgba(255,255,255,.9)'
-      g.font = 'bold 8px Tahoma, sans-serif'
+      g.font = FONT.ui(8, 700)
       g.fillText(k, q.x - 3, q.y - 8)
     }
 
     // legende chiffree
     const ms = (v: number) => (v >= 1 ? `${v.toFixed(2)}s` : `${Math.round(v * 1000)}ms`)
     g.fillStyle = 'rgba(190,200,216,.75)'
-    g.font = '9px "Courier New", monospace'
+    g.font = FONT.mono(9)
     g.fillText(`A ${ms(e.a)}   D ${ms(e.d)}   S ${Math.round(e.s * 100)}%   R ${ms(e.r)}`, PAD, hgt - 3)
   }
 
@@ -276,7 +277,7 @@ export function scopeDisplay(): Scope {
 
       if (!an) {
         g.fillStyle = 'rgba(120,190,150,.45)'
-        g.font = 'bold 9px "Courier New", monospace'
+        g.font = FONT.mono(9, 700)
         g.fillText('PAS DE SIGNAL', 8, waveH / 2 - 6)
         return
       }

@@ -13,6 +13,9 @@
   --dj-dim: #8f86b8;
   --dj-a: #ff5cb0;
   --dj-b: #5fe6ff;
+  --accent: #ff8ecb;
+  --muted: var(--dj-dim);
+  --engrave: #b7abe0;
   display: flex; flex-direction: column; height: 100%;
   color: var(--dj-text);
   background:
@@ -23,36 +26,31 @@
 
 /* ---------- barre ---------- */
 .dj-bar {
-  flex: 0 0 auto; display: flex; align-items: center; gap: 8px;
-  padding: 5px 9px; flex-wrap: wrap;
   background: linear-gradient(180deg, #3a3260, #221c3c);
-  border-bottom: 1px solid var(--dj-line);
-  box-shadow: inset 0 1px rgba(255,255,255,.14);
+  --app-line: var(--dj-line);
 }
-.dj-logo {
-  font: 900 16px/1 "Trebuchet MS", Impact, sans-serif; letter-spacing: -.3px;
-  background: linear-gradient(180deg, #fff 0 40%, var(--dj-a) 41% 70%, #a81f6e 71% 100%);
-  -webkit-background-clip: text; background-clip: text; color: transparent;
-  filter: drop-shadow(1px 2px 0 #2a0d1e);
-  white-space: nowrap;
-}
-.dj-sub { font: 400 9px/1.5 Tahoma, "DejaVu Sans", Verdana, sans-serif; color: var(--dj-dim); }
+
 .dj-rec-time {
-  font: 700 11px/1 "Courier New", monospace; color: #ff6b6b;
+  font: var(--t-num); color: #ff6b6b;
   text-shadow: 0 0 8px rgba(255,80,80,.7);
 }
 
 .dj-btn, .dk-mini, .dk-play, .dk-cue, .dk-hot, .dk-loop, .mx-kill {
   display: inline-flex; align-items: center; justify-content: center; gap: 5px;
   cursor: pointer; color: #fff;
-  font: 700 9px/1 Tahoma, "DejaVu Sans", Verdana, sans-serif; letter-spacing: .5px;
-  border: 1px solid #100c22; border-radius: 4px;
+  font: var(--t-label); letter-spacing: .5px;
+  border: 1px solid #100c22; border-radius: var(--r-2);
   background: linear-gradient(180deg, #4a3780, #2c2054);
   box-shadow: inset 0 1px rgba(255,255,255,.2), 0 1px 3px rgba(0,0,0,.5);
   padding: 6px 11px;
 }
+.dj-btn, .dk-mini, .dk-play, .dk-cue, .dk-hot, .dk-loop, .mx-kill, .dk-fx {
+  transition: filter var(--d-fast) linear, transform var(--d-fast) var(--ease);
+}
 .dj-btn:hover, .dk-mini:hover, .dk-play:hover, .dk-cue:hover,
 .dk-hot:hover, .dk-loop:hover, .mx-kill:hover { filter: brightness(1.22); }
+.dj-btn:active, .dk-mini:active, .dk-play:active, .dk-cue:active,
+.dk-hot:active, .dk-loop:active, .mx-kill:active, .dk-fx:active { transform: translateY(1px); }
 .dj-btn.go { background: linear-gradient(180deg, #ff7cc2, #d02a86); }
 .dj-btn.rec.on {
   background: linear-gradient(180deg, #ff6b6b, #a81f1f);
@@ -63,24 +61,14 @@
 
 /* ---------- accueil ---------- */
 .dj-scroll { flex: 1 1 auto; overflow: auto; padding: 10px; }
-.dj-intro {
-  max-width: 440px; margin: 40px auto; text-align: center;
-  display: grid; gap: 10px; justify-items: center;
-  padding: 26px 22px; border: 1px solid var(--dj-line); border-radius: 10px;
-  background: rgba(42,36,66,.5);
-}
-.dj-intro b { font: 900 15px/1.5 "Trebuchet MS", sans-serif; letter-spacing: .6px; }
-.dj-intro span { font: 400 11px/1.7 Tahoma, "DejaVu Sans", Verdana, sans-serif; color: var(--dj-dim); }
-.dj-intro-art { animation: djspin 6s linear infinite; line-height: 0; }
-@keyframes djspin { to { transform: rotate(360deg) } }
-@media (prefers-reduced-motion: reduce) { .dj-intro-art { animation: none } }
+.dj-intro-art { line-height: 0; }
 
 /* ---------- disposition ---------- */
 .dj-decks { display: flex; gap: 9px; align-items: stretch; flex-wrap: wrap; }
 .dj-deck {
   flex: 1 1 330px; min-width: 300px;
   display: flex; flex-direction: column; gap: 7px;
-  padding: 8px; border-radius: 8px;
+  padding: 8px; border-radius: var(--r-4);
   border: 1px solid var(--dj-line);
   background:
     repeating-linear-gradient(90deg, rgba(255,255,255,.018) 0 1px, transparent 1px 3px),
@@ -94,14 +82,14 @@
 .dk-head { display: flex; align-items: center; gap: 7px; }
 .dk-id {
   width: 22px; height: 22px; flex: 0 0 22px;
-  display: grid; place-items: center; border-radius: 3px;
-  font: 900 13px/1 "Trebuchet MS", sans-serif; color: #14101f;
+  display: grid; place-items: center; border-radius: var(--r-2);
+  font: var(--t-display-s); color: #14101f;
 }
 .deck-A .dk-id { background: var(--dj-a); }
 .deck-B .dk-id { background: var(--dj-b); }
 .dk-name {
   flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  font: 700 11px/1.4 Tahoma, "DejaVu Sans", Verdana, sans-serif; letter-spacing: .3px;
+  font: var(--t-body-b); letter-spacing: .3px;
 }
 .dk-name.empty { color: var(--dj-dim); font-weight: 400; }
 
@@ -109,7 +97,7 @@
   /* elle prend la hauteur qui reste : sur une platine, la forme d'onde
      est l'element qu'on regarde le plus */
   flex: 1 1 auto; min-height: 84px; position: relative;
-  border: 1px solid #080610; border-radius: 4px; overflow: hidden;
+  border: 1px solid #080610; border-radius: var(--r-2); overflow: hidden;
   box-shadow: inset 2px 2px 6px rgba(0,0,0,.85);
   cursor: crosshair; touch-action: none;
 }
@@ -127,20 +115,20 @@
 .dk-side { flex: 1 1 auto; display: flex; flex-direction: column; align-items: center; gap: 5px; }
 .dk-bpm {
   width: 100%; text-align: center; padding: 3px 5px;
-  background: #0b0816; border: 1px solid #060410; border-radius: 3px;
+  background: #0b0816; border: 1px solid #060410; border-radius: var(--r-2);
   box-shadow: inset 2px 2px 5px rgba(0,0,0,.9);
 }
 .dk-bpm u {
   display: block; text-decoration: none;
-  font: 700 8px/1.5 Tahoma, "DejaVu Sans", Verdana, sans-serif;
+  font: var(--t-micro);
   letter-spacing: 1.5px; color: var(--dj-dim);
 }
 .dk-bpm b {
-  display: block; font: 700 19px/1.1 "Courier New", monospace;
+  display: block; font: var(--t-num-xl);
   color: #ffd489; text-shadow: 0 0 9px rgba(255,212,137,.55);
   font-variant-numeric: tabular-nums;
 }
-.dk-pitch { font: 400 9px/1.4 "Courier New", monospace; color: var(--dj-b); }
+.dk-pitch { font: var(--t-num-r); color: var(--dj-b); }
 .dk-row { display: flex; gap: 4px; }
 .dk-mini { padding: 4px 8px; font-size: 8px; }
 .dk-mini.go { background: linear-gradient(180deg, #6ddc8a, #2a8a46); color: #04210f; }
@@ -151,13 +139,13 @@
 .dk-play.on { background: linear-gradient(180deg, #6ddc8a, #2a8a46); color: #04210f; }
 .dk-cue { flex: 0 0 62px; padding: 9px 8px; font-size: 11px; background: linear-gradient(180deg, #ffd489, #c8880f); color: #241704; }
 .dk-cue:active { filter: brightness(.85); }
-.dk-time { font: 400 10px/1 "Courier New", monospace; color: var(--dj-dim); font-variant-numeric: tabular-nums; }
+.dk-time { font: var(--t-num-r); color: var(--dj-dim); font-variant-numeric: tabular-nums; }
 
 .dk-pads { display: flex; flex-direction: column; gap: 4px; }
 .dk-padrow { display: flex; align-items: center; gap: 4px; }
 .dk-padrow u {
   flex: 0 0 52px; text-decoration: none;
-  font: 700 8px/1.5 Tahoma, "DejaVu Sans", Verdana, sans-serif;
+  font: var(--t-micro);
   letter-spacing: 1.2px; color: var(--dj-dim);
 }
 .dk-hot, .dk-loop { flex: 1 1 auto; padding: 7px 4px; font-size: 10px; }
@@ -168,7 +156,7 @@
 /* ---------- table de mixage ---------- */
 .dj-mixer {
   flex: 0 0 auto; display: flex; gap: 6px; padding: 8px 7px;
-  border-radius: 8px; border: 1px solid var(--dj-line);
+  border-radius: var(--r-4); border: 1px solid var(--dj-line);
   background:
     repeating-linear-gradient(90deg, rgba(255,255,255,.02) 0 1px, transparent 1px 4px),
     linear-gradient(180deg, #322b52, #1a1628);
@@ -176,15 +164,15 @@
 }
 .mx-strip, .mx-master {
   display: flex; flex-direction: column; align-items: center; gap: 5px;
-  padding: 6px 5px 8px; border-radius: 5px;
+  padding: 6px 5px 8px; border-radius: var(--r-3);
   border: 1px solid #100c22;
   background: linear-gradient(180deg, #3a3260, #201b36);
   box-shadow: inset 0 1px rgba(255,255,255,.14);
 }
 .mx-strip > *, .mx-master > * { flex: 0 0 auto; }
 .mx-strip u, .mx-master u {
-  text-decoration: none; font: 900 11px/1 "Trebuchet MS", sans-serif;
-  letter-spacing: 1px; padding: 2px 8px; border-radius: 3px;
+  text-decoration: none; font: var(--t-display-s);
+  letter-spacing: 1px; padding: 2px 8px; border-radius: var(--r-2);
 }
 .mx-A u { background: var(--dj-a); color: #240c19; }
 .mx-B u { background: var(--dj-b); color: #06222b; }
@@ -193,7 +181,7 @@
 .mx-eqrow { display: flex; align-items: center; gap: 3px; }
 .mx-kill {
   width: 17px; height: 17px; padding: 0; flex: 0 0 17px;
-  font-size: 10px; border-radius: 2px;
+  font-size: 10px; border-radius: var(--r-1);
   background: linear-gradient(180deg, #3a3260, #221c3c);
 }
 .mx-kill.on { background: linear-gradient(180deg, #ff6b6b, #a81f1f); box-shadow: inset 0 1px rgba(255,255,255,.3), 0 0 7px rgba(255,80,80,.6); }
@@ -204,17 +192,17 @@
 /* ---------- crossfader ---------- */
 .dj-xf {
   display: flex; align-items: center; gap: 9px; margin-top: 9px;
-  padding: 9px 12px; border-radius: 8px; border: 1px solid var(--dj-line);
+  padding: 9px 12px; border-radius: var(--r-4); border: 1px solid var(--dj-line);
   background: linear-gradient(180deg, #322b52, #1a1628);
   box-shadow: inset 0 1px rgba(255,255,255,.14);
   flex-wrap: wrap;
 }
-.xf-side { font: 900 13px/1 "Trebuchet MS", sans-serif; color: var(--dj-dim); }
+.xf-side { font: var(--t-display-s); color: var(--dj-dim); }
 .dj-xf .xf-side:first-of-type { color: var(--dj-a); }
 .dj-xf .xf-side:nth-of-type(2) { color: var(--dj-b); }
 .xf-track {
   position: relative; flex: 1 1 240px; min-width: 180px; height: 26px;
-  border: 1px solid #060410; border-radius: 4px;
+  border: 1px solid #060410; border-radius: var(--r-2);
   background:
     linear-gradient(90deg, rgba(255,92,176,.22), transparent 45%, transparent 55%, rgba(95,230,255,.22)),
     linear-gradient(180deg, #0b0816, #17122a);
@@ -225,13 +213,13 @@
 .xf-track::before {
   content: ''; position: absolute; left: 8px; right: 8px; top: 50%;
   height: 3px; transform: translateY(-50%);
-  background: #05030c; border-radius: 2px;
+  background: #05030c; border-radius: var(--r-1);
   box-shadow: inset 0 1px 2px rgba(0,0,0,.9), 0 1px 0 rgba(255,255,255,.08);
 }
 .xf-cap {
   position: absolute; top: 2px; bottom: 2px; width: 26px;
   transform: translateX(-50%);
-  border: 1px solid #0d0a1a; border-radius: 3px;
+  border: 1px solid #0d0a1a; border-radius: var(--r-2);
   background: linear-gradient(180deg, #f4f4f8, #b6b9c4 45%, #6d707c 52%, #cfd2da);
   box-shadow: 0 2px 5px rgba(0,0,0,.6);
 }
@@ -251,7 +239,7 @@
   display: inline-flex; align-items: center; justify-content: center;
   cursor: pointer; color: #fff; letter-spacing: .5px;
   font-family: Tahoma, "DejaVu Sans", Verdana, sans-serif; font-weight: 700;
-  border: 1px solid #100c22; border-radius: 4px;
+  border: 1px solid #100c22; border-radius: var(--r-2);
   background: linear-gradient(180deg, #4a3780, #2c2054);
   box-shadow: inset 0 1px rgba(255,255,255,.2), 0 1px 3px rgba(0,0,0,.5);
 }

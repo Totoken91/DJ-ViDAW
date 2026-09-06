@@ -7,6 +7,7 @@
 import { h, clear, drag } from './dom'
 import { icon } from './icons'
 import { knob } from './knob'
+import { emptyState } from './shell'
 import { eqView, BAND_COLORS, type EqView } from './eqview'
 import { EQ_PRESETS, BAND_NAMES } from '../audio/eq'
 import type { Ctx } from './ctx'
@@ -58,10 +59,10 @@ export class Nightcore {
   }
 
   private bar(): HTMLElement {
-    return h('div', { class: 'nc-bar' },
+    return h('div', { class: 'app-head nc-bar' },
       icon('moon', 18),
-      h('span', { class: 'nc-title' }, 'ACCELERE, CA MONTE'),
-      h('span', { class: 'nc-note' }, 'c\'est tout le secret du nightcore'),
+      h('span', { class: 'app-title' }, 'NIGHTCORIFICATION'),
+      h('span', { class: 'app-sub' }, 'on accelere, ca monte — c\'est tout le secret'),
       h('div', { class: 'spacer' }),
       h('button', { class: 'nc-btn', onclick: () => this.fileInput.click() }, icon('folder'), 'OUVRIR UN MORCEAU'),
     )
@@ -71,13 +72,12 @@ export class Nightcore {
 
   private renderEmpty() {
     clear(this.scroll)
-    const drop = h('div', { class: 'nc-drop', onclick: () => this.fileInput.click() },
-      icon('moon', 46),
-      h('b', {}, 'DEPOSE UN MORCEAU ICI'),
-      h('span', {}, 'wav · mp3 · ogg · flac · m4a', h('br'),
-        'Il sera accelere, la voix montera, et une reverbe rendra le tout', h('br'),
-        'beaucoup plus dramatique que necessaire.'),
-    )
+    const drop = emptyState({
+      icon: 'moon', drop: true,
+      title: 'DEPOSE UN MORCEAU ICI',
+      line: 'wav · mp3 · ogg · flac · m4a — il sera accelere, la voix montera, et une reverbe rendra le tout beaucoup plus dramatique que necessaire.',
+      onClick: () => this.fileInput.click(),
+    })
     const stop = (e: Event) => { e.preventDefault(); e.stopPropagation() }
     for (const t of ['dragenter', 'dragover']) drop.addEventListener(t, (e) => { stop(e); drop.classList.add('hover') })
     for (const t of ['dragleave', 'drop']) drop.addEventListener(t, (e) => { stop(e); drop.classList.remove('hover') })
@@ -296,6 +296,7 @@ export class Nightcore {
       el.selectedIndex = 0
       if (!p) return
       p.bands.forEach((g, i) => { if (this.s.eq[i]) { this.s.eq[i].g = g; this.s.eq[i].on = true } })
+      view.invalidate()
       this.push(); this.paintEqRows(); view.draw()
       this.ctx.toast(`EQ : ${p.name}`)
     } },
@@ -307,6 +308,7 @@ export class Nightcore {
       class: 'nc-btn', dataset: { tip: 'Remet les cinq bandes a plat' },
       onclick: () => {
         for (const b of this.s.eq) { b.g = 0; b.on = true }
+        view.invalidate()
         this.push(); this.paintEqRows(); view.draw()
       },
     }, icon('broom', 12), 'A PLAT')
@@ -442,6 +444,49 @@ export class Nightcore {
     else this.renderEmpty()
   }
 
+  /** L'onde ne change pas d'une image a l'autre : on la peint une fois
+      dans un canevas a part, et chaque image ne fait plus que la recopier
+      avant d'y poser la boucle et la tete de lecture. Avant, c'etaient
+      six cents rectangles et six cents couleurs analysees par image. */
+  private waveCache: HTMLCanvasElement | null = null
+  private waveKey = ''
+
+  private buildWave(w: number, hh: number, dpr: number): HTMLCanvasElement {
+    const key = `${w}x${hh}@${dpr}|${this.peaks?.length ?? 0}|${this.trackName}`
+    if (this.waveCache && this.waveKey === key) return this.waveCache
+    const cv = document.createElement('canvas')
+    cv.width = Math.floor(w * dpr); cv.height = Math.floor(hh * dpr)
+    const g = cv.getContext('2d')!
+    g.setTransform(dpr, 0, 0, dpr, 0, 0)
+    g.fillStyle = '#100b22'; g.fillRect(0, 0, w, hh)
+    g.fillStyle = 'rgba(255,255,255,.05)'
+    for (let x = 0; x < w; x += 10) g.fillRect(x, 0, 1, hh)
+
+    const peaks = this.peaks
+    if (peaks) {
+      const cols = peaks.length / 2
+      const mid = hh / 2
+      // Le degrade rose -> cyan est peint en une passe, en masquant la
+      // silhouette : une couleur par pixel coutait six cents analyses
+      // de chaine CSS par image.
+      const grad = g.createLinearGradient(0, 0, w, 0)
+      grad.addColorStop(0, 'rgb(255,92,176)')
+      grad.addColorStop(1, 'rgb(95,230,255)')
+      g.beginPath()
+      for (let x = 0; x < w; x++) {
+        const i = Math.min(cols - 1, Math.floor((x / w) * cols))
+        const y0 = mid - peaks[i * 2 + 1] * mid * 0.9
+        const y1 = mid - peaks[i * 2] * mid * 0.9
+        g.rect(x, y0, 1, Math.max(1, y1 - y0))
+      }
+      g.fillStyle = grad
+      g.fill()
+    }
+    this.waveCache = cv
+    this.waveKey = key
+    return cv
+  }
+
   private paintWave() {
     const cv = this.waveCv
     if (!cv || !this.peaks) return
@@ -449,25 +494,10 @@ export class Nightcore {
     const dpr = Math.min(2, window.devicePixelRatio || 1)
     if (cv.width !== Math.floor(w * dpr)) { cv.width = Math.floor(w * dpr); cv.height = Math.floor(hh * dpr) }
     const g = cv.getContext('2d')!
+    g.setTransform(1, 0, 0, 1, 0, 0)
+    g.clearRect(0, 0, cv.width, cv.height)
+    g.drawImage(this.buildWave(w, hh, dpr), 0, 0)
     g.setTransform(dpr, 0, 0, dpr, 0, 0)
-
-    g.clearRect(0, 0, w, hh)
-    g.fillStyle = '#100b22'; g.fillRect(0, 0, w, hh)
-    g.fillStyle = 'rgba(255,255,255,.05)'
-    for (let x = 0; x < w; x += 10) g.fillRect(x, 0, 1, hh)
-
-    const cols = this.peaks.length / 2
-    const mid = hh / 2
-    for (let x = 0; x < w; x++) {
-      const i = Math.min(cols - 1, Math.floor((x / w) * cols))
-      const mn = this.peaks[i * 2], mx = this.peaks[i * 2 + 1]
-      const y0 = mid - mx * mid * 0.9
-      const y1 = mid - mn * mid * 0.9
-      // degrade rose -> cyan sur la largeur : c'est la palette du module
-      const t = x / w
-      g.fillStyle = `rgb(${Math.round(255 - t * 160)},${Math.round(92 + t * 138)},${Math.round(176 + t * 79)})`
-      g.fillRect(x, y0, 1, Math.max(1, y1 - y0))
-    }
 
     if (this.loop) {
       const [a, b] = this.loop
@@ -485,6 +515,7 @@ export class Nightcore {
       g.beginPath(); g.moveTo(x - 5, 0); g.lineTo(x + 5, 0); g.lineTo(x, 7); g.fill()
     }
   }
+
 
   private bindWave(wrap: HTMLElement, cv: HTMLCanvasElement) {
     const at = (clientX: number) => {

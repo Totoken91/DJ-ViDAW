@@ -5,12 +5,14 @@
    ============================================================ */
 
 import { h, clear, drag } from './dom'
+import { FONT } from './type'
 import { icon } from './icons'
 import { knob } from './knob'
 import type { Ctx } from './ctx'
 import type { Channel } from '../core/state'
 import { clamp, defaultDrum, keyName, uid, patternSteps, DRUM_KINDS } from '../core/state'
 import { detectSlices, guessBpm } from '../audio/samples'
+import { playDrum } from '../audio/voices'
 import { SynthPanel } from './synth'
 
 
@@ -104,23 +106,87 @@ export class ChannelEditor {
 
     const K = (label: string, min: number, max: number, get: () => number, set: (v: number) => void, def: number, curve = 1) =>
       knob({ min, max, value: get(), def, label, size: 44, curve, color: ch.color,
-        onInput: (v) => { set(v); c.markDirty(); void c.engine.preview(ch.id, 60, 2, 1) } })
+        onInput: (v) => { set(v); c.markDirty(); this.onDrumChange?.(); void c.engine.preview(ch.id, 60, 2, 1) } })
 
-    return h('div', {},
-      h('div', { class: 'chrome', style: { fontSize: '17px', marginBottom: '6px' } }, 'PERCUSSION SYNTHETIQUE'),
+    // Un apercu de la frappe, rendu hors-ligne a chaque reglage : on voit
+    // l'attaque et la queue changer sous le potard, au lieu de tourner a
+    // l'aveugle en attendant le prochain coup.
+    const shot = h('canvas', { class: 'hit-cv' }) as HTMLCanvasElement
+    const hit = h('div', { class: 'hit' },
+      shot,
+      h('span', { class: 'hit-cap' }, 'FRAPPE'))
+    const repaint = () => void this.paintHit(shot, ch)
+    this.onDrumChange = repaint
+    requestAnimationFrame(repaint)
+
+    return h('div', { class: 'drum' },
+      h('div', { class: 'app-title', style: { marginBottom: '6px' } }, 'PERCUSSION SYNTHETIQUE'),
       kinds,
-      h('div', { class: 'fxunit' },
-        h('div', { class: 'fxhead' }, h('span', {}, 'MOTEUR')),
-        h('div', { class: 'fxbody' },
-          K('TUNE', -24, 24, () => d.tune, (v) => { d.tune = v }, 0),
-          K('DECAY', 0.02, 2, () => d.decay, (v) => { d.decay = v }, 0.3, 2),
-          K('TONE', 0, 1, () => d.tone, (v) => { d.tone = v }, 0.5),
-          K('SNAP', 0, 1, () => d.snap, (v) => { d.snap = v }, 0.5),
-          K('DRIVE', 0, 1, () => d.drive, (v) => { d.drive = v }, 0.15),
+      h('div', { class: 'drum-row' },
+        h('div', { class: 'fxunit', style: { flex: '1 1 auto' } },
+          h('div', { class: 'fxhead' }, h('span', {}, 'MOTEUR')),
+          h('div', { class: 'fxbody' },
+            K('TUNE', -24, 24, () => d.tune, (v) => { d.tune = v }, 0),
+            K('DECAY', 0.02, 2, () => d.decay, (v) => { d.decay = v }, 0.3, 2),
+            K('TONE', 0, 1, () => d.tone, (v) => { d.tone = v }, 0.5),
+            K('SNAP', 0, 1, () => d.snap, (v) => { d.snap = v }, 0.5),
+            K('DRIVE', 0, 1, () => d.drive, (v) => { d.drive = v }, 0.15),
+          ),
         ),
+        hit,
       ),
       h('div', { class: 'hint' }, 'Astuce : monte DRIVE et baisse TONE sur un KICK, tu obtiens un truc qui tache.'),
     )
+  }
+
+  /** Rend la frappe hors-ligne et la dessine. Un rendu de 0,6 s a 22 kHz :
+      c'est assez court pour suivre un potard qu'on tourne. */
+  private hitJob = 0
+  private onDrumChange: (() => void) | null = null
+
+  private async paintHit(cv: HTMLCanvasElement, ch: Channel) {
+    const job = ++this.hitJob
+    const d = ch.drum
+    if (!d) return
+    const OC: typeof OfflineAudioContext = window.OfflineAudioContext ||
+      (window as unknown as { webkitOfflineAudioContext: typeof OfflineAudioContext }).webkitOfflineAudioContext
+    const rate = 22050
+    const octx = new OC(1, Math.ceil(rate * 0.6), rate)
+    playDrum(octx, octx.destination, d, 0, 1, 0)
+    const buf = await octx.startRendering()
+    if (job !== this.hitJob || !cv.isConnected) return
+
+    const w = cv.clientWidth || 220, hh = cv.clientHeight || 92
+    const dpr = Math.min(2, window.devicePixelRatio || 1)
+    cv.width = Math.round(w * dpr); cv.height = Math.round(hh * dpr)
+    const g = cv.getContext('2d')!
+    g.setTransform(dpr, 0, 0, dpr, 0, 0)
+    g.clearRect(0, 0, w, hh)
+    g.fillStyle = '#0a0d12'; g.fillRect(0, 0, w, hh)
+
+    // reperes de temps : 100 ms par trait
+    for (let t = 0.1; t < 0.6; t += 0.1) {
+      const x = (t / 0.6) * w
+      g.fillStyle = 'rgba(255,255,255,.07)'
+      g.fillRect(x, 0, 1, hh)
+    }
+    g.fillStyle = 'rgba(255,255,255,.14)'
+    g.fillRect(0, hh / 2, w, 1)
+
+    const data = buf.getChannelData(0)
+    const per = data.length / w
+    g.beginPath()
+    for (let x = 0; x < w; x++) {
+      let mx = 0
+      const a = Math.floor(x * per), b = Math.min(data.length, Math.floor((x + 1) * per))
+      for (let i = a; i < b; i++) { const v = Math.abs(data[i]); if (v > mx) mx = v }
+      const y = (hh / 2) * Math.min(1, mx)
+      g.rect(x, hh / 2 - y, 1, Math.max(1, y * 2))
+    }
+    g.fillStyle = ch.color
+    g.fill()
+    g.shadowColor = ch.color; g.shadowBlur = 6
+    g.fill(); g.shadowBlur = 0
   }
 
   /* ---------------- synthetiseur ----------------
@@ -224,7 +290,7 @@ export class ChannelEditor {
     requestAnimationFrame(() => this.paintWave(ch))
 
     return h('div', {},
-      h('div', { class: 'chrome', style: { fontSize: '17px', marginBottom: '6px' } }, 'SAMPLER'),
+      h('div', { class: 'app-title', style: { marginBottom: '6px' } }, 'SAMPLER'),
       h('div', { class: 'bar thin', style: { borderRadius: '3px', marginBottom: '6px' } },
         h('span', { class: 'hint' }, 'SAMPLE'), pick,
         meta ? h('span', { class: 'pill' }, `${meta.duration.toFixed(2)}s · ${meta.rate}Hz · ${meta.channels}ch`) : null,
@@ -302,7 +368,7 @@ export class ChannelEditor {
 
     const meta = sp.sampleId ? this.ctx.samples.meta(sp.sampleId) : undefined
     if (!meta) {
-      g.fillStyle = '#4d5b6b'; g.font = 'bold 12px Tahoma, sans-serif'
+      g.fillStyle = '#4d5b6b'; g.font = FONT.ui(12, 700)
       g.textAlign = 'center'
       g.fillText('AUCUN SAMPLE — importe un fichier dans le navigateur', w / 2, hh / 2)
       g.textAlign = 'left'
@@ -335,12 +401,12 @@ export class ChannelEditor {
       const x = pos * w
       g.fillStyle = col; g.fillRect(x - 1, 0, 2, hh)
       g.fillRect(x - 1, 0, 12, 12)
-      g.fillStyle = '#000'; g.font = 'bold 9px Tahoma, sans-serif'
+      g.fillStyle = '#000'; g.font = FONT.ui(9, 700)
       g.fillText(label, x + 2, 9)
     }
 
     // tranches
-    g.font = 'bold 8px Tahoma, sans-serif'
+    g.font = FONT.ui(8, 700)
     sp.slices.forEach((s, i) => {
       const x = s * w
       g.fillStyle = '#ef9c39'
@@ -356,7 +422,7 @@ export class ChannelEditor {
     }
 
     if (sp.reverse) {
-      g.fillStyle = 'rgba(194,109,146,.9)'; g.font = 'bold 11px Tahoma, sans-serif'
+      g.fillStyle = 'rgba(194,109,146,.9)'; g.font = FONT.ui(11, 700)
       g.fillText('◀ INVERSE', 8, 18)
     }
   }

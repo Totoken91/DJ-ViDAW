@@ -43,7 +43,7 @@
 .cluster {
   display: flex; align-items: center; gap: 3px;
   padding: 3px 4px;
-  border: 1px solid #14141a; border-radius: 4px;
+  border: 1px solid #14141a; border-radius: var(--r-2);
   background: linear-gradient(180deg, var(--ink-500), var(--ink-600));
   box-shadow: inset 0 1px 0 rgba(255,255,255,.12), inset 0 -6px 10px rgba(0,0,0,.18);
 }
@@ -51,19 +51,23 @@
 
 /* ---------- Boutons ---------- */
 .btn {
-  font: 700 10px/1 Tahoma, sans-serif;
+  font: var(--t-btn);
   letter-spacing: .3px;
   padding: 5px 9px;
   color: #f2f4fa;
   background: linear-gradient(180deg, var(--ink-400), var(--ink-500) 52%, var(--ink-600));
   border: 1px solid var(--ink-900);
-  border-radius: 3px;
+  border-radius: var(--r-2);
   box-shadow: inset 0 1px 0 rgba(255,255,255,.28), 0 1px 2px rgba(0,0,0,.45);
   cursor: pointer;
   white-space: nowrap;
   display: inline-flex; align-items: center; gap: 5px;
 }
+.btn { transition: filter var(--d-fast) linear, transform var(--d-fast) var(--ease); }
 .btn:hover { filter: brightness(1.2); }
+/* Un bouton qu'on enfonce descend. C'est le meme geste partout :
+   boutons, pas, pastilles, touches de clavier. */
+.btn:active { transform: translateY(1px); }
 .btn:active, .btn.on {
   background: linear-gradient(180deg, var(--ink-800), var(--ink-600));
   box-shadow: inset 1px 1px 4px rgba(0,0,0,.7);
@@ -73,16 +77,16 @@
 .btn.go  { background: linear-gradient(180deg, #79d98a, #3ba24f 55%, #26743a); color: #062012; text-shadow: 0 1px 0 rgba(255,255,255,.22); }
 .btn.rec { background: linear-gradient(180deg, #e07d7d, #c03636 55%, #8a2020); color: #fff; text-shadow: 0 1px 0 rgba(0,0,0,.4); }
 .btn.tiny { padding: 3px 6px; font-size: 9px; }
-.btn.xs { padding: 1px 4px; font-size: 9px; border-radius: 2px; }
+.btn.xs { padding: 1px 4px; font-size: 9px; border-radius: var(--r-1); }
 
 /* ---------- Afficheurs LCD ---------- */
 .lcd {
-  font: 700 15px/1 "Courier New", monospace;
+  font: var(--t-num-l);
   color: var(--hot-lit);
   background: #150f06;
   border: 1px solid #0a0703;
   box-shadow: inset 0 0 10px rgba(255,180,70,.16), inset 1px 1px 3px rgba(0,0,0,.9);
-  padding: 4px 8px; border-radius: 2px;
+  padding: 4px 8px; border-radius: var(--r-1);
   text-shadow: 0 0 6px rgba(255,196,107,.55);
   letter-spacing: 1px;
   cursor: ns-resize; touch-action: none;
@@ -99,12 +103,12 @@
 }
 .knob.grabbing { filter: brightness(1.25); }
 .knob-cv { display: block; }
-.knob-label { font: 700 8px/1 Tahoma, sans-serif; color: #b9bfcd; letter-spacing: .4px; text-transform: uppercase; }
-.knob-val { font: 700 8px/1.2 "Courier New", monospace; color: var(--amber); min-height: 10px; }
+.knob-label { font: var(--t-micro); color: #b9bfcd; letter-spacing: .4px; text-transform: uppercase; }
+.knob-val { font: var(--t-num-s); color: var(--amber); min-height: 10px; }
 /* Saisie directe : le readout devient un champ, sans changer de gabarit. */
 .knob-type {
   width: 46px; padding: 0 2px; text-align: center;
-  font: 700 8px/1.2 "Courier New", monospace;
+  font: var(--t-num-s);
   color: var(--amber); background: #0a0d10;
   border: 1px solid var(--hot-deep); outline: none;
 }
@@ -116,26 +120,26 @@
   position: relative; width: 16px;
   background: linear-gradient(90deg, var(--ink-900), var(--ink-700) 40%, var(--ink-900));
   border: 1px solid #0d0d12;
-  border-radius: 3px;
+  border-radius: var(--r-2);
   box-shadow: inset 1px 1px 3px rgba(0,0,0,.9);
   cursor: ns-resize; touch-action: none;
 }
 .fader-fill {
   position: absolute; left: 3px; right: 3px; bottom: 0;
   background: linear-gradient(0deg, #2c6f3d, #58ad6b);
-  border-radius: 2px; opacity: .6;
+  border-radius: var(--r-1); opacity: .6;
 }
 .fader-cap {
   position: absolute; left: -5px; right: -5px; height: 16px;
   background: linear-gradient(180deg, #f4f4f8, #b6b9c4 45%, #6d707c 52%, #cfd2da 100%);
-  border: 1px solid #101015; border-radius: 3px;
+  border: 1px solid #101015; border-radius: var(--r-2);
   box-shadow: 0 1px 3px rgba(0,0,0,.6);
 }
 .fader-cap::after {
   content: ''; position: absolute; left: 2px; right: 2px; top: 50%;
   height: 2px; background: #d8452f; transform: translateY(-50%);
 }
-.meter { display: block; border: 1px solid #0b0b10; border-radius: 2px; }
+.meter { display: block; border: 1px solid #0b0b10; border-radius: var(--r-1); }
 
 /* ---------- Grille du sequenceur ----------
    Une seule couleur pour les pas. L'identite d'un channel tient dans sa
@@ -160,11 +164,11 @@
   width: 148px; flex: 0 0 148px;
   display: flex; align-items: center; gap: 7px;
   padding: 4px 7px 4px 0;
-  border: 1px solid var(--ink-900); border-radius: 3px;
+  border: 1px solid var(--ink-900); border-radius: var(--r-2);
   background: linear-gradient(180deg, var(--ink-500), var(--ink-600) 55%, var(--ink-700));
   box-shadow: inset 0 1px 0 rgba(255,255,255,.11), 0 1px 2px rgba(0,0,0,.35);
   cursor: pointer; overflow: hidden; position: relative;
-  font: 700 10px/1.25 Tahoma, "DejaVu Sans", Verdana, sans-serif; color: #e2e7f0;
+  font: var(--t-strong); color: #e2e7f0;
 }
 .ch-btn:hover { filter: brightness(1.13); }
 /* la pastille de couleur : une reglette peinte sur la tranche du module */
@@ -174,38 +178,40 @@
 }
 .ch-name { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; letter-spacing: .2px; }
 .ch-tag {
-  font: 700 7px/1 Tahoma, "DejaVu Sans", Verdana, sans-serif;
+  font: var(--t-micro);
   color: var(--ink-300); letter-spacing: .8px;
-  padding: 2px 3px; border: 1px solid rgba(0,0,0,.4); border-radius: 2px;
+  padding: 2px 3px; border: 1px solid rgba(0,0,0,.4); border-radius: var(--r-1);
   background: rgba(0,0,0,.22);
 }
 
 .mini { display: flex; gap: 2px; flex: 0 0 auto; }
 .mini button {
   width: 17px; height: 17px; padding: 0;
-  font: 700 8px/1 Tahoma, "DejaVu Sans", Verdana, sans-serif; color: var(--ink-200);
+  font: var(--t-micro); color: var(--ink-200);
   background: linear-gradient(180deg, var(--ink-500), var(--ink-700));
-  border: 1px solid var(--ink-900); border-radius: 2px; cursor: pointer;
+  border: 1px solid var(--ink-900); border-radius: var(--r-1); cursor: pointer;
   box-shadow: inset 0 1px 0 rgba(255,255,255,.09);
 }
+.mini button { transition: filter var(--d-fast) linear, transform var(--d-fast) var(--ease); }
 .mini button:hover { filter: brightness(1.25); }
+.mini button:active { transform: translateY(1px); }
 .mini button.on { background: linear-gradient(180deg, var(--warn), #9a7c11); color: #241d00; }
 .mini button.on.m { background: linear-gradient(180deg, var(--rec), #7d1f1f); color: #fff; }
 
 /* une rainure separe le module de sa grille, comme sur un rack */
 .steps {
   display: flex; gap: 1px; flex: 0 0 auto;
-  padding: 3px 5px; border-radius: 3px;
+  padding: 3px 5px; border-radius: var(--r-2);
   background: var(--ink-900);
   box-shadow: inset 1px 1px 3px rgba(0,0,0,.75), 0 1px 0 rgba(255,255,255,.05);
 }
 .step {
   width: 20px; height: 25px;
-  border: 1px solid #0b0d12; border-radius: 2px;
+  border: 1px solid #0b0d12; border-radius: var(--r-1);
   background: linear-gradient(180deg, var(--ink-700), var(--ink-800));
   box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
   cursor: pointer; position: relative;
-  transition: background .06s linear;
+  transition: background var(--d-fast) linear;
 }
 .step.beat {
   background: linear-gradient(180deg, var(--ink-600), var(--ink-700));
@@ -224,6 +230,11 @@
 
 /* Pas actif : ambre, dont l'intensite porte la velocite (--v de 0 a 1).
    La reglette du bas la redit en longueur, pour qui lit mal les nuances. */
+/* Poser un pas doit s'entendre ET se voir : la case gonfle un instant.
+   C'est ce qui fait la difference entre « ca a marche » et « je crois ». */
+@keyframes step-pop { 0% { transform: scale(.82) } 60% { transform: scale(1.1) } 100% { transform: scale(1) } }
+.step.on { animation: step-pop 130ms var(--ease); }
+@media (prefers-reduced-motion: reduce) { .step.on { animation: none } }
 .step.on {
   --lit: color-mix(in srgb, var(--hot-lit) calc(35% + var(--v, 1) * 65%), var(--hot-deep));
   background:
@@ -267,7 +278,7 @@
      hauteur : c'est le fader qui doit ceder, pas le nom de la tranche */
   padding: 6px 4px 7px;
   background: linear-gradient(180deg, var(--ink-500), var(--ink-600) 60%, var(--ink-700));
-  border: 1px solid var(--ink-900); border-radius: 3px;
+  border: 1px solid var(--ink-900); border-radius: var(--r-2);
   box-shadow: inset 0 1px 0 rgba(255,255,255,.12), inset 0 -12px 18px rgba(0,0,0,.2);
   position: relative;
 }
@@ -286,8 +297,8 @@
 }
 .strip-name {
   width: 100%; text-align: center; margin-top: 5px;
-  font: 700 9px/1.5 Tahoma, "DejaVu Sans", Verdana, sans-serif;
-  background: var(--ink-900); border: 1px solid #090b0f; border-radius: 2px;
+  font: var(--t-label);
+  background: var(--ink-900); border: 1px solid #090b0f; border-radius: var(--r-1);
   box-shadow: inset 1px 1px 3px rgba(0,0,0,.8);
   padding: 2px 1px; color: #c3cad6; cursor: pointer;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -296,7 +307,7 @@
 .strip.master .strip-name { color: #e2c9f0; }
 .strip-row { display: flex; gap: 5px; align-items: flex-end; }
 .strip-tag {
-  font: 700 7px/1.4 Tahoma, "DejaVu Sans", Verdana, sans-serif;
+  font: var(--t-micro);
   color: var(--ink-300); letter-spacing: .8px; text-align: center; width: 100%;
 }
 
@@ -304,7 +315,7 @@
 .fxrack { display: flex; flex-direction: column; gap: 4px; padding: 6px; overflow: auto; height: 100%; }
 .fxunit {
   flex: 0 0 auto;
-  border: 1px solid var(--ink-900); border-radius: 3px;
+  border: 1px solid var(--ink-900); border-radius: var(--r-2);
   background: linear-gradient(180deg, var(--ink-600), var(--ink-700));
   box-shadow: inset 0 1px 0 rgba(255,255,255,.13), 0 1px 2px rgba(0,0,0,.35);
   overflow: hidden;
@@ -315,47 +326,39 @@
   background: linear-gradient(180deg, var(--ink-500), var(--ink-600));
   border-bottom: 1px solid var(--ink-900);
   box-shadow: inset 0 1px 0 rgba(255,255,255,.1);
-  font: 700 10px/1.4 Tahoma, "DejaVu Sans", Verdana, sans-serif;
+  font: var(--t-strong);
   color: #d8dee9; letter-spacing: 1px;
 }
 /* une pastille de famille sur la tranche gauche : filtres, temporels,
    saturation, dynamique. Quatre familles, quatre reperes. */
 .fxunit { border-left: 3px solid var(--fam, var(--ink-400)); }
 .fxhead .num {
-  font: 700 9px/1 "Courier New", monospace; color: var(--ink-900);
-  background: var(--fam, var(--ink-300)); border-radius: 2px;
+  font: var(--t-num-s); color: var(--ink-900);
+  background: var(--fam, var(--ink-300)); border-radius: var(--r-1);
   padding: 2px 4px; min-width: 14px; text-align: center;
 }
 .fxbody { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px 6px 10px; align-items: flex-start; }
 
 /* ---------- Navigateur de samples ---------- */
 .browser { display: flex; flex-direction: column; height: 100%; }
-.drop {
-  margin: 6px; padding: 14px 8px; text-align: center;
-  border: 2px dashed var(--ink-400); border-radius: 6px;
-  color: var(--ink-200); font: 700 10px/1.5 Tahoma, "DejaVu Sans", Verdana, sans-serif;
-  background: repeating-linear-gradient(45deg, rgba(255,255,255,.03) 0 6px, transparent 6px 12px);
-  cursor: pointer;
-}
-.drop.hover { border-color: var(--sel); color: var(--sel); background: rgba(78,163,232,.09); }
 .smp-list { flex: 1 1 auto; overflow: auto; padding: 0 6px 6px; }
 .smp {
   display: flex; align-items: center; gap: 6px;
   padding: 4px 6px; margin-bottom: 3px;
   background: linear-gradient(180deg, var(--ink-500), var(--ink-700));
-  border: 1px solid var(--ink-900); border-radius: 3px;
-  cursor: grab; font: 700 10px/1.2 Tahoma, "DejaVu Sans", Verdana, sans-serif; color: #d8dee9;
+  border: 1px solid var(--ink-900); border-radius: var(--r-2);
+  cursor: grab; font: var(--t-strong); color: #d8dee9;
 }
 .smp:hover { filter: brightness(1.2); border-color: var(--sel); }
-.smp .dur { font: 400 9px/1 "Courier New", monospace; color: #8f95a4; }
+.smp .dur { font: var(--t-num-r); color: #8f95a4; }
 .smp .nm { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ---------- Onglets ---------- */
 .tabs { display: flex; gap: 2px; padding: 4px 4px 0; background: var(--ink-700); border-bottom: 1px solid var(--ink-900); flex: 0 0 auto; }
 .tab {
-  padding: 4px 10px; font: 700 10px/1 Tahoma, "DejaVu Sans", Verdana, sans-serif; color: #b6bbc8; cursor: pointer;
+  padding: 4px 10px; font: var(--t-btn); color: #b6bbc8; cursor: pointer;
   background: linear-gradient(180deg, var(--ink-500), var(--ink-700));
-  border: 1px solid var(--ink-900); border-bottom: none; border-radius: 4px 4px 0 0;
+  border: 1px solid var(--ink-900); border-bottom: none; border-radius: var(--r-2) var(--r-2) 0 0;
 }
 .tab.on { color: var(--hot-lit); background: linear-gradient(180deg, var(--ink-500), var(--ink-600)); }
 
@@ -368,12 +371,12 @@
   background: linear-gradient(180deg, var(--ink-600), var(--ink-700));
   border-top: 1px solid #16161c;
   box-shadow: inset 0 1px 0 rgba(255,255,255,.09);
-  font: 400 10px/1 Tahoma, "DejaVu Sans", Verdana, sans-serif; color: #9aa0b0;
+  font: var(--t-label-r); color: #9aa0b0;
   overflow: hidden; white-space: nowrap;
 }
 .statusbar .sb-cell {
   padding: 0 7px; height: 15px; display: flex; align-items: center;
-  border: 1px solid #1c1c22; border-radius: 2px;
+  border: 1px solid #1c1c22; border-radius: var(--r-1);
   box-shadow: inset 1px 1px 0 rgba(0,0,0,.45), inset -1px -1px 0 rgba(255,255,255,.07);
 }
 .statusbar .sb-msg { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; }
@@ -381,26 +384,44 @@
 .statusbar .sb-grip { flex: 0 0 auto; width: 14px; align-self: stretch; }
 
 /* ---------- Divers ---------- */
-.hint { font: 400 9px/1.4 Tahoma, "DejaVu Sans", Verdana, sans-serif; color: var(--ink-300); padding: 4px 6px; }
+.hint { font: var(--t-label-r); color: var(--ink-300); padding: 4px 6px; }
 .bar .hint { color: #a7adbb; letter-spacing: .3px; }
 .pill {
-  font: 700 9px/1 Tahoma, "DejaVu Sans", Verdana, sans-serif; padding: 3px 6px; border-radius: 9px;
+  font: var(--t-label); padding: 3px 6px; border-radius: var(--r-4);
   background: var(--ink-900); color: var(--hot-lit); border: 1px solid #090b0f;
 }
 input.txt, select.sel {
-  font: 700 10px/1 Tahoma, "DejaVu Sans", Verdana, sans-serif; color: #e6e9f1;
-  background: var(--ink-900); border: 1px solid #090b0f; border-radius: 2px;
+  font: var(--t-btn); color: #e6e9f1;
+  background: var(--ink-900); border: 1px solid #090b0f; border-radius: var(--r-1);
   padding: 4px 5px; outline: none;
 }
 input.txt:focus { box-shadow: 0 0 0 1px var(--sel); }
 select.sel { cursor: pointer; }
-.check { display: inline-flex; align-items: center; gap: 4px; font: 700 9px/1 Tahoma, "DejaVu Sans", Verdana, sans-serif; color: #c3c8d4; cursor: pointer; }
+.check { display: inline-flex; align-items: center; gap: 4px; font: var(--t-label); color: #c3c8d4; cursor: pointer; }
 .check input { accent-color: #00c96f; }
 
 ::-webkit-scrollbar { width: 15px; height: 15px; }
 ::-webkit-scrollbar-track { background: #d4d0c8; box-shadow: inset 1px 1px 0 #808080; }
 ::-webkit-scrollbar-thumb {
   background: linear-gradient(180deg, #fdfdfd, #d8d4cb 45%, #b7b2a6);
-  border: 1px solid #6f6a5e; border-radius: 2px;
+  border: 1px solid #6f6a5e; border-radius: var(--r-1);
 }
 ::-webkit-scrollbar-corner { background: #d4d0c8; }
+
+/* ---------- Apercu de frappe (editeur de percussion) ----------
+   Une percussion, ca se juge a l'oeil autant qu'a l'oreille : on voit
+   l'attaque, la queue, et ce que DRIVE fait a la forme. */
+.drum-row { display: flex; gap: 6px; align-items: stretch; flex-wrap: wrap; }
+.hit {
+  position: relative; flex: 0 0 236px; min-width: 190px;
+  border: 1px solid var(--ink-900); border-radius: var(--r-2);
+  background: linear-gradient(180deg, var(--ink-600), var(--ink-700));
+  box-shadow: inset 0 1px rgba(255, 255, 255, .13), 0 1px 2px rgba(0, 0, 0, .35);
+  overflow: hidden;
+}
+.hit-cv { display: block; width: 100%; height: 100%; min-height: 96px; }
+.hit-cap {
+  position: absolute; left: 7px; top: 5px; pointer-events: none;
+  font: var(--t-micro); letter-spacing: var(--ls-caps-wide);
+  color: var(--ink-200); text-shadow: 0 1px 2px rgba(0, 0, 0, .9);
+}
