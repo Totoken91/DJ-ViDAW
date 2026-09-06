@@ -38,6 +38,17 @@
 
 .sep { width: 1px; align-self: stretch; margin: 1px 3px; background: linear-gradient(#16161c, #6a6a76); }
 
+/* Groupes de commandes : un bloc grave par famille d'actions, comme sur
+   la barre du haut. Une rangee de boutons identiques ne dit rien. */
+.cluster {
+  display: flex; align-items: center; gap: 3px;
+  padding: 3px 4px;
+  border: 1px solid #14141a; border-radius: 4px;
+  background: linear-gradient(180deg, #4a4a56, #383840);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.12), inset 0 -6px 10px rgba(0,0,0,.18);
+}
+.cluster > .hint { padding: 0 3px; }
+
 /* ---------- Boutons ---------- */
 .btn {
   font: 700 10px/1 Tahoma, sans-serif;
@@ -159,16 +170,27 @@
 .mini button.on { background: linear-gradient(180deg, #ffd23d, #d99e00); color: #241a00; }
 .mini button.on.m { background: linear-gradient(180deg, #ff6b6b, #b81717); color: #fff; }
 
-.steps { display: flex; gap: 2px; flex: 0 0 auto; }
+.steps { display: flex; gap: 1px; flex: 0 0 auto; }
+/* Les temps se voient avant meme de jouer : les pas sur le temps sont plus
+   clairs, et chaque groupe de quatre est detache du suivant. */
 .step {
-  width: 20px; height: 22px;
-  border: 1px solid #101015; border-radius: 2px;
-  background: linear-gradient(180deg, #4a4a54, #33333b);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.13);
+  width: 20px; height: 24px;
+  border: 1px solid #0e0e13; border-radius: 2px;
+  background: linear-gradient(180deg, #3c3c45, #2c2c33);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.07);
   cursor: pointer; position: relative;
 }
-.step.beat { background: linear-gradient(180deg, #5a5a66, #3d3d47); }
-.step.bar4 { box-shadow: inset 0 1px 0 rgba(255,255,255,.2), inset 2px 0 0 rgba(255,255,255,.22); }
+.step.beat {
+  background: linear-gradient(180deg, #55555f, #3b3b44);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.16);
+  margin-left: 5px;
+}
+.step.beat:first-child { margin-left: 0; }
+.step.bar4 {
+  margin-left: 11px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.2), -6px 0 0 -5px rgba(255,255,255,.28);
+}
+.step.bar4:first-child { margin-left: 0; box-shadow: inset 0 1px 0 rgba(255,255,255,.2); }
 .step:hover { filter: brightness(1.35); }
 .step.on {
   background: linear-gradient(180deg, #ffffff 0 12%, var(--sc, #ff8a3d) 14%, #7a3a12 100%);
@@ -178,7 +200,7 @@
   content: ''; position: absolute; left: 2px; right: 2px; bottom: 1px;
   height: var(--vel, 60%); background: rgba(255,255,255,.35); border-radius: 1px;
 }
-.step.play { outline: 2px solid #fff; outline-offset: -1px; }
+.step.play { outline: 2px solid #fff; outline-offset: -1px; box-shadow: 0 0 9px rgba(255,255,255,.5); }
 .playcol { box-shadow: inset 0 0 0 99px rgba(255,255,255,.14) !important; }
 
 /* ---------- Piano roll / playlist (canvas) ---------- */
@@ -255,8 +277,30 @@
 }
 .tab.on { color: var(--neon); background: linear-gradient(180deg, #5b5b68, #3f3f49); }
 
+/* ---------- Barre d'etat ----------
+   Les aides contextuelles descendent ici plutot que d'encombrer les
+   barres d'outils : c'est ou un logiciel de 2001 les mettait. */
+.statusbar {
+  flex: 0 0 auto; display: flex; align-items: center; gap: 6px;
+  height: 20px; padding: 0 4px;
+  background: linear-gradient(180deg, #3a3a44, #2c2c34);
+  border-top: 1px solid #16161c;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.09);
+  font: 400 10px/1 Tahoma, "DejaVu Sans", Verdana, sans-serif; color: #9aa0b0;
+  overflow: hidden; white-space: nowrap;
+}
+.statusbar .sb-cell {
+  padding: 0 7px; height: 15px; display: flex; align-items: center;
+  border: 1px solid #1c1c22; border-radius: 2px;
+  box-shadow: inset 1px 1px 0 rgba(0,0,0,.45), inset -1px -1px 0 rgba(255,255,255,.07);
+}
+.statusbar .sb-msg { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; }
+.statusbar .sb-msg b { color: #d5dae5; }
+.statusbar .sb-grip { flex: 0 0 auto; width: 14px; align-self: stretch; }
+
 /* ---------- Divers ---------- */
 .hint { font: 400 9px/1.4 Tahoma, "DejaVu Sans", Verdana, sans-serif; color: #8b90a0; padding: 4px 6px; }
+.bar .hint { color: #a7adbb; letter-spacing: .3px; }
 .pill {
   font: 700 9px/1 Tahoma, "DejaVu Sans", Verdana, sans-serif; padding: 3px 6px; border-radius: 9px;
   background: #14141a; color: var(--neon-3); border: 1px solid #0a0a0e;

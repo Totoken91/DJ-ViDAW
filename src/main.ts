@@ -20,7 +20,8 @@ import { Browser } from './ui/browser'
 import { Nightcore } from './ui/nightcore'
 import { Transport } from './ui/transport'
 import { Viteau } from './ui/viteau'
-import { boot, dialog, closeDialog, toast, Taskbar, Saver, desktopIcon, type MenuEntry } from './ui/shell'
+import { dialog, closeDialog, toast, Taskbar, Saver, desktopIcon, type MenuEntry } from './ui/shell'
+import { boot } from './ui/boot'
 import { icon } from './ui/icons'
 import { installWallpaper } from './ui/wallpaper'
 import type { Ctx } from './ui/ctx'
@@ -483,7 +484,7 @@ function buildUI() {
 
   const W = window.innerWidth, H = window.innerHeight - 100
   const mk = (id: string, title: string, icon: string, content: HTMLElement,
-              x: number, y: number, w: number, hh: number, onResize?: () => void) => {
+              x: number, y: number, w: number, hh: number, onResize?: () => void, status?: string) => {
     const win = new Win({
       id, title, icon,
       x: Math.min(x, Math.max(10, W - w - 10)), y: Math.min(y, Math.max(10, H - 80)),
@@ -491,17 +492,25 @@ function buildUI() {
       onResize, onGeometry: saveLayout,
     }, desktop)
     win.body.appendChild(content)
+    if (status) win.setStatusBar(status)
     wins.set(id, win)
     return win
   }
 
-  mk('rack', 'Channel Rack', 'rack', rack.el, 106, 8, 660, 320)
-  mk('roll', 'Piano roll', 'piano', roll.el, 330, 210, 720, 400, () => roll.resize())
-  mk('playlist', 'Playlist', 'playlist', playlist.el, 150, 344, 780, 292, () => playlist.resize())
-  mk('mixer', 'Mixeur', 'mixer', mixer.el, 786, 8, 620, 560)
-  mk('channel', 'Instrument', 'wrench', chEditor.el, 170, 74, 780, 600)
-  mk('browser', 'Navigateur de samples', 'folder', browser.el, 120, 60, 380, 420)
-  mk('nightcore', 'Nightcorification', 'moon', nightcore.el, 190, 34, 880, 630, () => nightcore.refresh())
+  mk('rack', 'Channel Rack', 'rack', rack.el, 106, 8, 690, 348, undefined,
+     'Clic pour poser un pas · clic droit ou molette pour la velocite · double-clic sur un nom pour le piano roll')
+  mk('roll', 'Piano roll', 'piano', roll.el, 330, 210, 740, 410, () => roll.resize(),
+     'Clic pour poser une note · glisser son bord droit pour la longueur · Ctrl+molette pour zoomer')
+  mk('playlist', 'Playlist', 'playlist', playlist.el, 150, 348, 800, 300, () => playlist.resize(),
+     'Clic pour poser un motif · clic droit pour effacer · glisser pour deplacer · Maj+molette pour les pistes')
+  mk('mixer', 'Mixeur', 'mixer', mixer.el, 790, 8, 620, 570, undefined,
+     'Choisis une tranche, puis ajoute ses effets en dessous')
+  mk('channel', 'Instrument', 'wrench', chEditor.el, 170, 74, 800, 600, undefined,
+     'F2 rouvre cette fenetre · sur un synthetiseur, le clavier de l\'ordinateur joue les notes')
+  mk('browser', 'Navigateur de samples', 'folder', browser.el, 120, 60, 390, 430, undefined,
+     'Glisse un fichier audio n\'importe ou sur le bureau pour l\'importer')
+  mk('nightcore', 'Nightcorification', 'moon', nightcore.el, 190, 34, 890, 630, () => nightcore.refresh(),
+     'Clic sur la forme d\'onde pour se placer · glisser pour tracer une boucle · clic droit pour l\'enlever')
 
   for (const id of ['roll', 'mixer', 'browser', 'channel', 'nightcore']) wins.get(id)!.close()
 
@@ -597,7 +606,13 @@ function buildUI() {
     h('div', { class: 'wr-ring' }, '« precedent · webring DAW · suivant »'),
   ))
 
-  installWallpaper(desktop)
+  // Le paysage coute ~200 ms de calcul : on le peint pendant que l'ecran
+  // de demarrage occupe l'affichage, sinon il saccade son animation.
+  const paintWall = () => installWallpaper(desktop)
+  if ('requestIdleCallback' in window) {
+    (window as Window & { requestIdleCallback(cb: () => void, o?: { timeout: number }): number })
+      .requestIdleCallback(paintWall, { timeout: 1200 })
+  } else setTimeout(paintWall, 450)
 
   app.append(transport.el, desktop, taskbar.el, taskbar.menu, viteau.el, saver.el)
 
@@ -860,6 +875,7 @@ const shown = (id: string) => {
 }
 
 let lastStep = -2
+let lastInfo = ''
 function loop() {
   transport.scope.draw()
   if (shown('mixer')) mixer.tick()
@@ -875,6 +891,13 @@ function loop() {
     if (shown('roll')) roll.setPlayhead(pat)
     if (shown('playlist')) playlist.setPlayhead(song)
     transport.setPosition(Math.max(0, s))
+  }
+
+  const pat = project.patterns.find((x) => x.id === project.currentPattern)
+  const info = `${project.bpm} BPM · ${pat ? pat.name : '—'} · ${pat ? pat.bars : 1} MES`
+  if (info !== lastInfo) {
+    lastInfo = info
+    for (const w of wins.values()) w.setInfo(info)
   }
   requestAnimationFrame(loop)
 }

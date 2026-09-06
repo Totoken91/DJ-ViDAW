@@ -46,15 +46,14 @@ export class Playlist {
 
   private bar(): HTMLElement {
     return h('div', { class: 'bar thin' },
-      h('span', { class: 'hint' }, 'PINCEAU'),
-      this.brushSel,
-      h('button', { class: 'btn tiny', onclick: () => this.addPattern() }, icon('plus'), 'MOTIF'),
-      h('button', { class: 'btn tiny', onclick: () => this.clonePattern() }, '⧉ CLONER'),
-      h('div', { class: 'sep' }),
-      h('button', { class: 'btn tiny', onclick: () => { this.ctx.project.clips = []; this.ctx.markDirty(); this.draw() } }, icon('broom'), 'VIDER'),
-      h('button', { class: 'btn tiny', onclick: () => this.autoArrange() }, icon('wand'), 'ARRANGER AUTO'),
+      h('div', { class: 'cluster' }, h('span', { class: 'hint' }, 'PINCEAU'), this.brushSel),
+      h('div', { class: 'cluster' },
+        h('button', { class: 'btn tiny', dataset: { tip: 'Cree un motif vide' }, onclick: () => this.addPattern() }, icon('plus'), 'MOTIF'),
+        h('button', { class: 'btn tiny', dataset: { tip: 'Duplique le motif courant (Ctrl+D)' }, onclick: () => this.clonePattern() }, '⧉ CLONER')),
+      h('div', { class: 'cluster' },
+        h('button', { class: 'btn tiny', dataset: { tip: 'Retire tous les clips de l\'arrangement' }, onclick: () => { this.ctx.project.clips = []; this.ctx.markDirty(); this.draw() } }, icon('broom'), 'VIDER'),
+        h('button', { class: 'btn tiny', dataset: { tip: 'Pose une structure de seize mesures avec les motifs existants' }, onclick: () => this.autoArrange() }, icon('wand'), 'ARRANGER AUTO')),
       h('div', { class: 'spacer' }),
-      h('span', { class: 'hint' }, 'clic=poser · droit=effacer · glisser=deplacer · ctrl+molette=zoom · maj+molette=pistes'),
     )
   }
 

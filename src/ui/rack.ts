@@ -37,17 +37,17 @@ export class Rack {
     )
 
     return h('div', { class: 'bar thin' },
-      addMenu,
-      h('button', { class: 'btn tiny', onclick: () => this.randomize() }, icon('dice'), 'HASARD'),
-      h('button', { class: 'btn tiny', onclick: () => this.clearPattern() }, icon('broom'), 'VIDER'),
-      h('div', { class: 'sep' }),
-      h('span', { class: 'hint' }, 'clic = pas · clic droit/molette = velocite · double-clic nom = piano roll'),
+      h('div', { class: 'cluster' }, addMenu),
+      h('div', { class: 'cluster' },
+        h('button', { class: 'btn tiny', dataset: { tip: 'Remplit le motif au hasard, avec des densites plausibles par instrument' }, onclick: () => this.randomize() }, icon('dice'), 'HASARD'),
+        h('button', { class: 'btn tiny', dataset: { tip: 'Efface toutes les notes du motif courant' }, onclick: () => this.clearPattern() }, icon('broom'), 'VIDER')),
       h('div', { class: 'spacer' }),
-      h('button', { class: 'btn tiny', onclick: () => this.setBars(-1) }, '−1 MES'),
-      h('span', { class: 'pill', id: 'rack-bars' }, '1 MES'),
-      h('button', { class: 'btn tiny', onclick: () => this.setBars(1) }, '+1 MES'),
-      h('div', { class: 'sep' }),
-      h('button', { class: 'btn tiny', onclick: () => c.openWindow('mixer') }, icon('mixer'), 'MIXEUR'),
+      h('div', { class: 'cluster' },
+        h('button', { class: 'btn tiny', dataset: { tip: 'Raccourcit le motif d\'une mesure' }, onclick: () => this.setBars(-1) }, '−'),
+        h('span', { class: 'pill', id: 'rack-bars' }, '1 MES'),
+        h('button', { class: 'btn tiny', dataset: { tip: 'Rallonge le motif d\'une mesure' }, onclick: () => this.setBars(1) }, '+')),
+      h('div', { class: 'cluster' },
+        h('button', { class: 'btn tiny', dataset: { tip: 'Ouvre le mixeur (Alt+4)' }, onclick: () => c.openWindow('mixer') }, icon('mixer'), 'MIXEUR')),
     )
   }
 
@@ -128,23 +128,25 @@ export class Rack {
       const nameEl = h('span', { class: 'ch-name' }, ch.name)
       const btn = h('div', {
         class: 'ch-btn',
+        dataset: { tip: `${ch.name} — clic pour selectionner, double-clic pour le piano roll, clic droit pour renommer` },
         onclick: () => c.selectChannel(ch.id),
         ondblclick: () => this.onOpenRoll(ch.id),
         oncontextmenu: (e: Event) => { e.preventDefault(); this.renameChannel(ch) },
       }, led, nameEl, h('span', { class: 'ch-tag' }, ch.type === 'drum' ? 'DRM' : ch.type === 'synth' ? 'SYN' : 'SMP'))
 
       const mute = h('button', {
-        class: `m${ch.mute ? ' on m' : ''}`, title: 'Muet',
+        class: `m${ch.mute ? ' on m' : ''}`, title: 'Muet', dataset: { tip: `Rend ${ch.name} silencieux` },
         onclick: () => { ch.mute = !ch.mute; mute.classList.toggle('on', ch.mute); mute.classList.toggle('m', ch.mute); c.sync(); c.markDirty() },
       }, 'M')
       const solo = h('button', {
-        class: ch.solo ? 'on' : '', title: 'Solo',
+        class: ch.solo ? 'on' : '', title: 'Solo', dataset: { tip: `N'entend plus que ${ch.name}` },
         onclick: () => { ch.solo = !ch.solo; c.sync(); c.markDirty(); this.render() },
       }, 'S')
-      const roll = h('button', { title: 'Piano roll', onclick: () => this.onOpenRoll(ch.id) }, icon('piano', 12))
+      const roll = h('button', { title: 'Piano roll', dataset: { tip: `Ouvre ${ch.name} dans le piano roll` }, onclick: () => this.onOpenRoll(ch.id) }, icon('piano', 12))
       const del = h('button', {
         title: 'Supprimer', onclick: () => this.removeChannel(ch),
       }, '✕')
+      del.dataset.tip = `Supprime le channel ${ch.name}`
 
       const stepEls: HTMLElement[] = []
       const grid = h('div', { class: 'steps' })

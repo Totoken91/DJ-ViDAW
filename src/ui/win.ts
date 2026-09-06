@@ -63,6 +63,9 @@ export class Win {
   titleEl: HTMLElement
   taskBtn: HTMLElement | null = null
   opts: WinOpts
+  private sbMsg: HTMLElement | null = null
+  private sbInfo: HTMLElement | null = null
+  private sbDefault = ''
   private maxed = false
   private prev = { x: 0, y: 0, w: 0, h: 0 }
   open = true
@@ -167,6 +170,36 @@ export class Win {
     this.el.classList.add('snapping')
     Object.assign(this.el.style, { left: `${r.x}px`, top: `${r.y}px`, width: `${r.w}px`, height: `${r.h}px` })
     setTimeout(() => { this.el.classList.remove('snapping'); this.opts.onResize?.() }, 150)
+  }
+
+  /* ---------------- barre d'etat ---------------- */
+
+  /** Ajoute la barre d'etat en pied de fenetre. Le message par defaut y
+      reste affiche, et survoler un element porteur de data-tip le remplace :
+      c'est la ou les aides contextuelles vivaient a l'epoque, plutot que
+      collees dans la barre d'outils. */
+  setStatusBar(defaultMsg: string) {
+    this.sbDefault = defaultMsg
+    this.sbMsg = h('div', { class: 'sb-cell sb-msg' }, defaultMsg)
+    this.sbInfo = h('div', { class: 'sb-cell' }, '—')
+    this.body.appendChild(h('div', { class: 'statusbar' }, this.sbMsg, this.sbInfo, h('div', { class: 'sb-grip' })))
+
+    this.body.addEventListener('pointerover', (e) => {
+      const el = (e.target as HTMLElement)?.closest?.('[data-tip]') as HTMLElement | null
+      if (el?.dataset.tip) this.setStatus(el.dataset.tip)
+    })
+    this.body.addEventListener('pointerout', (e) => {
+      const el = (e.target as HTMLElement)?.closest?.('[data-tip]')
+      if (el) this.setStatus(null)
+    })
+  }
+
+  setStatus(msg: string | null) {
+    if (this.sbMsg) this.sbMsg.textContent = msg ?? this.sbDefault
+  }
+
+  setInfo(msg: string) {
+    if (this.sbInfo && this.sbInfo.textContent !== msg) this.sbInfo.textContent = msg
   }
 
   /* ---------------- etat ---------------- */

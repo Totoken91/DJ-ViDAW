@@ -7,42 +7,6 @@
 import { h, clear } from './dom'
 import { icon } from './icons'
 
-/* ---------------- Ecran de demarrage ---------------- */
-
-export function boot(onStart: () => void): HTMLElement {
-  const lines = [
-    'DJ ViDAW BIOS v1.0 — (C) 2001 Viteau Systems',
-    'Detection du materiel audio ................ OK',
-    'Chargement des potards .................... OK',
-    'Verification du niveau de goofy ........... 147%',
-    'Anti-virus : aucun virus (ni antivirus) ... OK',
-  ]
-  const log = h('div', { class: 'boot-foot' })
-  const el = h('div', { id: 'boot' },
-    h('div', { class: 'boot-logo' }, 'DJ ViDAW'),
-    h('div', { class: 'boot-sub' }, 'PAR DJ VITEAU'),
-    h('div', { class: 'boot-bar' }, h('i')),
-    h('button', { class: 'boot-go', style: { display: 'none' }, onclick: onStart }, '▶  DEMARRER LA MACHINE'),
-    log,
-  )
-  let i = 0
-  const tick = () => {
-    if (i < lines.length) {
-      log.appendChild(h('div', {}, lines[i++]))
-      setTimeout(tick, 240 + Math.random() * 160)
-    } else {
-      const btn = el.querySelector<HTMLElement>('.boot-go')!
-      btn.style.display = ''
-      const bar = el.querySelector<HTMLElement>('.boot-bar')
-      if (bar) bar.style.display = 'none'
-      log.appendChild(h('div', { style: { marginTop: '8px', color: '#8fd0ff' } },
-        'Le son ne peut demarrer qu\'apres un clic. Merci les navigateurs.'))
-    }
-  }
-  setTimeout(tick, 300)
-  return el
-}
-
 /* ---------------- Boites de dialogue ---------------- */
 
 let modalLayer: HTMLElement | null = null

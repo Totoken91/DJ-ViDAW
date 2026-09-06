@@ -152,6 +152,7 @@ export class ChannelEditor {
     this.waveCv = cv
 
     const wrap = h('div', {
+      dataset: { tip: 'Glisser pour regler DEBUT et FIN · Alt+clic pour poser une tranche · clic droit pour l\'enlever' },
       style: {
         position: 'relative', border: '1px solid #0d0d12', borderRadius: '3px',
         background: '#0d1218', marginBottom: '8px', overflow: 'hidden',
@@ -275,8 +276,7 @@ export class ChannelEditor {
         ),
       ),
       h('div', { class: 'hint' },
-        `Note de base : ${keyName(sp.rootKey)}. Dans le piano roll, jouer plus haut accelere le sample. ` +
-        'Glisse sur la forme d\'onde pour DEBUT/FIN, alt+clic pour poser une tranche, clic droit pour l\'enlever.'),
+        `Note de base : ${keyName(sp.rootKey)} — jouer plus haut dans le piano roll accelere le sample.`),
     )
   }
 

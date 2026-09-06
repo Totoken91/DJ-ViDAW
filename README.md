@@ -110,6 +110,21 @@ tel dans l'interface plutôt que caché.
   l'écoute), ou envoi direct comme channel sampler pour le découper dans le
   séquenceur.
 
+### Le démarrage
+
+Deux écrans, dans l'ordre où ils existaient vraiment :
+
+1. **Le POST du BIOS** — mode texte VGA, aligné à gauche en colonnes, test
+   mémoire qui compte, détection des périphériques, logo Energy Star, balayage
+   cathodique. `Échap` le passe, comme le propose la ligne du bas.
+2. **Le splash du logiciel** — une fenêtre sans bordure : illustration et
+   version à gauche, licence, barre de progression segmentée, ligne d'état qui
+   défile, mention de copyright. Puis le bouton qui autorise l'audio, parce que
+   les navigateurs exigent un geste — ce n'est pas une décoration.
+
+Pas de titre en dégradé arc-en-ciel, pas de bouton pilule qui pulse : ce sont
+des tics de page d'accueil moderne, et ils n'ont rien à faire ici.
+
 ### Confort d'usage
 
 - **Démarrage sur un projet vierge** : le rack est prêt, aucune note n'est
@@ -126,6 +141,13 @@ tel dans l'interface plutôt que caché.
   suivant, `?` affiche la liste complète des raccourcis.
 - Le focus clavier est visible partout, et les animations s'effacent sous
   `prefers-reduced-motion`.
+- **Barres d'état** en pied de fenêtre : les aides contextuelles y descendent au
+  lieu d'encombrer les barres d'outils, et survoler une commande y affiche ce
+  qu'elle fait. La cellule de droite rappelle tempo, motif et longueur.
+- Les commandes sont regroupées en **blocs gravés** par famille d'actions —
+  une rangée de boutons identiques ne dit rien de leur rôle.
+- Dans le séquenceur, la grille laisse voir les temps **avant même de jouer** :
+  les pas sur le temps sont plus clairs et chaque groupe de quatre est détaché.
 
 ### Fluidité
 

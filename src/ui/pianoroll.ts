@@ -62,15 +62,15 @@ export class PianoRoll {
     return h('div', { class: 'bar thin' },
       this.titleEl,
       h('div', { class: 'sep' }),
-      h('div', { style: { display: 'flex', gap: '3px' } }, mk('draw', 'wand', 'DESSIN'), mk('erase', 'broom', 'GOMME')),
-      h('div', { class: 'sep' }),
-      h('button', { class: 'btn tiny', onclick: () => this.quantize() }, '⌗ QUANTISER'),
-      h('button', { class: 'btn tiny', onclick: () => this.transpose(12) }, '▲ OCT'),
-      h('button', { class: 'btn tiny', onclick: () => this.transpose(-12) }, '▼ OCT'),
-      h('button', { class: 'btn tiny', onclick: () => this.clearCh() }, icon('broom'), 'VIDER'),
-      h('button', { class: 'btn tiny', onclick: () => this.arp() }, icon('wand'), 'ARP MAGIQUE'),
+      h('div', { class: 'cluster' }, mk('draw', 'wand', 'DESSIN'), mk('erase', 'broom', 'GOMME')),
+      h('div', { class: 'cluster' },
+        h('button', { class: 'btn tiny', dataset: { tip: 'Recale toutes les notes sur la grille' }, onclick: () => this.quantize() }, '⌗ QUANTISER'),
+        h('button', { class: 'btn tiny', dataset: { tip: 'Monte tout d\'une octave' }, onclick: () => this.transpose(12) }, '▲ OCT'),
+        h('button', { class: 'btn tiny', dataset: { tip: 'Descend tout d\'une octave' }, onclick: () => this.transpose(-12) }, '▼ OCT')),
+      h('div', { class: 'cluster' },
+        h('button', { class: 'btn tiny', dataset: { tip: 'Efface les notes de ce channel' }, onclick: () => this.clearCh() }, icon('broom'), 'VIDER'),
+        h('button', { class: 'btn tiny', dataset: { tip: 'Genere un arpege en mineur sur tout le motif' }, onclick: () => this.arp() }, icon('wand'), 'ARP')),
       h('div', { class: 'spacer' }),
-      h('span', { class: 'hint' }, 'clic=note · glisser bord droit=longueur · molette=defiler · ctrl+molette=zoom'),
     )
   }
 

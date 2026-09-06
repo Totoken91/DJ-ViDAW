@@ -240,9 +240,6 @@ export class Nightcore {
       wave, readout, presets,
       h('div', { class: 'nc-main' }, big, h('div', { style: { display: 'flex', flexDirection: 'column', gap: '10px', flex: '1 1 320px' } }, space, tone)),
       actions,
-      h('div', { class: 'nc-note', style: { marginTop: '8px' } },
-        'Clic sur la forme d\'onde pour se placer, glisser pour definir une boucle, clic droit pour l\'enlever. ' +
-        'L\'export applique exactement la meme chaine, calculee hors-ligne.'),
     )
 
     requestAnimationFrame(() => { this.paintWave(); this.paintReadout(); this.paintTransport() })

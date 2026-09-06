@@ -26,9 +26,11 @@ export class Mixer {
     this.fxEl = h('div', { class: 'fxrack' })
     this.el = h('div', { class: 'rack' },
       h('div', { class: 'bar thin' },
-        h('span', { class: 'hint' }, 'clique une tranche puis ajoute des effets en dessous'),
         h('div', { class: 'spacer' }),
-        h('button', { class: 'btn tiny', onclick: () => this.routeSelected() }, icon('plug'), 'ROUTER LE CHANNEL ICI'),
+        h('button', {
+          class: 'btn tiny', dataset: { tip: 'Envoie le channel selectionne vers la tranche choisie' },
+          onclick: () => this.routeSelected(),
+        }, icon('plug'), 'ROUTER LE CHANNEL ICI'),
       ),
       h('div', { style: { flex: '0 0 auto', height: '246px', overflow: 'hidden', borderBottom: '1px solid #14141a' } }, this.stripsEl),
       this.fxEl,
