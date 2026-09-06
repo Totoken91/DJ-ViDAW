@@ -132,9 +132,20 @@ export const STEPS_PER_BAR = 16
 export const DRUM_KINDS: DrumKind[] =
   ['kick', 'snare', 'clap', 'hat', 'ohat', 'tom', 'rim', 'cowbell', 'crash', 'zap']
 
+/* Dix teintes de valeur voisine et de saturation moyenne : elles servent
+   a distinguer des pistes, pas a decorer. Dix couleurs criardes cote a
+   cote ne forment pas une palette, elles forment un arc-en-ciel. */
 export const CH_COLORS = [
-  '#ff4fa3', '#ffd53d', '#4fe0ff', '#8cff4f', '#ff8a3d',
-  '#c77dff', '#3dffcf', '#ff5f5f', '#9dff3d', '#5f9dff',
+  '#c86a6a', // terre cuite
+  '#c99a4e', // ocre
+  '#a8b055', // olive
+  '#5fa572', // sauge
+  '#4f9e9e', // sarcelle
+  '#5b8fc4', // denim
+  '#7d7fc0', // ardoise violette
+  '#a86fae', // prune
+  '#c26d92', // rose fane
+  '#94816b', // argile
 ]
 
 /* ------------------------------------------------------------------ */

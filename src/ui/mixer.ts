@@ -14,6 +14,21 @@ import { DIV_LABELS } from '../audio/fx'
 
 const FX_ORDER: FxType[] = ['filter', 'delay', 'reverb', 'crush', 'dist', 'chorus', 'phaser', 'eq3', 'comp', 'gate']
 
+/* Quatre familles d'effets, quatre reperes : on repere une chaine d'un
+   coup d'oeil sans lire les noms. */
+const FX_FAMILY: Record<FxType, { color: string; label: string }> = {
+  filter: { color: '#4ea3e8', label: 'FILTRE' },
+  eq3:    { color: '#4ea3e8', label: 'FILTRE' },
+  delay:  { color: '#9b8ae0', label: 'TEMPS' },
+  reverb: { color: '#9b8ae0', label: 'TEMPS' },
+  chorus: { color: '#9b8ae0', label: 'TEMPS' },
+  phaser: { color: '#9b8ae0', label: 'TEMPS' },
+  crush:  { color: '#ef9c39', label: 'MATIERE' },
+  dist:   { color: '#ef9c39', label: 'MATIERE' },
+  comp:   { color: '#5fa572', label: 'DYNAMIQUE' },
+  gate:   { color: '#5fa572', label: 'DYNAMIQUE' },
+}
+
 export class Mixer {
   el: HTMLElement
   private stripsEl: HTMLElement
@@ -32,7 +47,7 @@ export class Mixer {
           onclick: () => this.routeSelected(),
         }, icon('plug'), 'ROUTER LE CHANNEL ICI'),
       ),
-      h('div', { style: { flex: '0 0 auto', height: '246px', overflow: 'hidden', borderBottom: '1px solid #14141a' } }, this.stripsEl),
+      h('div', { style: { flex: '0 0 auto', height: '258px', overflow: 'hidden', borderBottom: '1px solid #14141a' } }, this.stripsEl),
       this.fxEl,
     )
     this.render()
@@ -67,7 +82,7 @@ export class Mixer {
       const f = fader({
         min: 0, max: 1.4, value: ins.vol, height: 118,
         onInput: (v) => { ins.vol = v; c.sync(); c.markDirty() },
-        color: i === 0 ? '#ff4fd8' : undefined,
+        color: i === 0 ? '#b08fd0' : undefined,
       })
 
       const strip = h('div', {
@@ -89,7 +104,7 @@ export class Mixer {
             c.sync(); c.markDirty(); this.render()
           },
         }, ins.mute ? 'MUET' : 'ON'),
-        h('div', { class: 'ch-tag', style: { textAlign: 'center', width: '100%' } },
+        h('div', { class: 'strip-tag' },
           ins.fx.length ? `${ins.fx.length} FX` : chNames.length ? `${chNames.length} CH` : '—'),
       )
       this.stripsEl.appendChild(strip)
@@ -145,13 +160,13 @@ export class Mixer {
       const curve = (key === 'freq' || key === 'tone' || key === 'damp' || key === 'cutoff') ? 2.6 : 1
       body.appendChild(knob({
         min, max, value: slot.p[key], def: dflt, label, size: 36, curve, format,
-        color: ['#00ff9c', '#ff4fd8', '#4fe9ff', '#ffd23d'][idx % 4],
+        color: FX_FAMILY[slot.type].color,
         onInput: (v) => { slot.p[key] = v; c.sync(); c.markDirty() },
       }))
     }
     body.appendChild(knob({
-      min: 0, max: 1, value: slot.wet, def: slot.wet, label: 'MIX', size: 36,
-      color: '#ffffff',
+      min: 0, max: 1, value: slot.wet, def: slot.wet, label: 'MIX', size: 38,
+      color: '#c5cbd8', ticks: 9,
       format: (v) => `${Math.round(v * 100)}%`,
       onInput: (v) => { slot.wet = v; c.sync(); c.markDirty() },
     }))
@@ -164,13 +179,17 @@ export class Mixer {
       c.sync(); c.markDirty(); this.renderFx()
     }
 
-    return h('div', { class: `fxunit${slot.on ? '' : ' off'}` },
+    const fam = FX_FAMILY[slot.type]
+    return h('div', { class: `fxunit${slot.on ? '' : ' off'}`, style: { '--fam': fam.color } },
       h('div', { class: 'fxhead' },
         h('button', {
           class: `btn xs${slot.on ? ' on' : ''}`,
+          dataset: { tip: slot.on ? 'Desactive cet effet sans le retirer' : 'Reactive cet effet' },
           onclick: () => { slot.on = !slot.on; c.sync(); c.markDirty(); this.renderFx() },
         }, slot.on ? '⏻' : '○'),
-        h('span', {}, `${idx + 1}. ${FX_DEFS[slot.type].label}`),
+        h('span', { class: 'num' }, String(idx + 1)),
+        h('span', {}, FX_DEFS[slot.type].label),
+        h('span', { class: 'ch-tag', style: { color: fam.color, borderColor: 'transparent', background: 'none' } }, fam.label),
         h('div', { class: 'spacer' }),
         idx > 0 ? h('button', { class: 'btn xs', onclick: () => move(-1) }, '▲') : null,
         idx < total - 1 ? h('button', { class: 'btn xs', onclick: () => move(1) }, '▼') : null,

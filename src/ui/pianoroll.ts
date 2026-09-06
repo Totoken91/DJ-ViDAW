@@ -22,7 +22,7 @@ export class PianoRoll {
   private host: HTMLElement
   chId: string
   private stepW = 26
-  private keyH = 13
+  private keyH = 15
   private scrollX = 0
   private scrollY = 0
   private mode: Mode = 'draw'
@@ -110,14 +110,16 @@ export class PianoRoll {
     const col = ch?.color ?? '#ff8a3d'
 
     g.clearRect(0, 0, W, H)
-    g.fillStyle = '#1a1a20'; g.fillRect(0, 0, W, H)
+    g.fillStyle = '#1d212a'; g.fillRect(0, 0, W, H)
 
     // lignes horizontales (touches)
     for (let k = 108; k >= 12; k--) {
       const y = this.keyToY(k)
       if (y > gridH || y + this.keyH < 0) continue
-      g.fillStyle = isBlack(k) ? '#202028' : '#26262f'
-      if (k % 12 === 0) g.fillStyle = '#2e2e3a'
+      // l'ecart entre touches noires et blanches doit se voir : c'est le
+      // seul repere vertical quand on lit une melodie
+      g.fillStyle = isBlack(k) ? '#191d25' : '#2c323e'
+      if (k % 12 === 0) g.fillStyle = '#3a4353'
       g.fillRect(KEY_W, y, W - KEY_W, this.keyH - 1)
     }
 
@@ -125,7 +127,7 @@ export class PianoRoll {
     for (let t = 0; t <= steps; t++) {
       const x = this.stepToX(t)
       if (x < KEY_W - 2 || x > W) continue
-      g.fillStyle = t % 16 === 0 ? '#6d6d84' : t % 4 === 0 ? '#43434f' : '#31313b'
+      g.fillStyle = t % 16 === 0 ? 'rgba(255,255,255,.34)' : t % 4 === 0 ? 'rgba(255,255,255,.14)' : 'rgba(255,255,255,.06)'
       g.fillRect(Math.round(x), 0, t % 16 === 0 ? 2 : 1, gridH)
     }
 
@@ -140,51 +142,60 @@ export class PianoRoll {
       const w = Math.max(4, n.len * this.stepW - 2)
       if (x > W || x + w < KEY_W || y > gridH || y + this.keyH < 0) continue
       const hh = this.keyH - 2
+      // La velocite joue sur la luminosite, pas sur le blanc ajoute :
+      // melanger vers le blanc desature et efface l'identite du channel.
+      const body = shade(col, -0.34 + n.vel * 0.5)
       const grad = g.createLinearGradient(0, y, 0, y + hh)
-      grad.addColorStop(0, '#ffffff')
-      grad.addColorStop(0.18, col)
-      grad.addColorStop(1, shade(col, -0.45))
+      grad.addColorStop(0, mix(body, '#ffffff', 0.5))
+      grad.addColorStop(0.12, body)
+      grad.addColorStop(1, shade(body, -0.42))
       g.fillStyle = grad
       g.fillRect(x, y, w, hh)
-      g.strokeStyle = 'rgba(0,0,0,.75)'; g.lineWidth = 1
+      g.strokeStyle = 'rgba(0,0,0,.85)'; g.lineWidth = 1
       g.strokeRect(x + 0.5, y + 0.5, w - 1, hh - 1)
-      // barre de velocite interne
-      g.fillStyle = 'rgba(0,0,0,.4)'
-      g.fillRect(x + 1, y + 1, Math.max(0, (w - 2) * (1 - n.vel)), 2)
-      if (n === this.hoverNote) { g.strokeStyle = '#fff'; g.strokeRect(x + 0.5, y + 0.5, w - 1, hh - 1) }
+      // la longueur de la reglette basse redit la velocite
+      g.fillStyle = 'rgba(255,255,255,.55)'
+      g.fillRect(x + 1.5, y + hh - 3, Math.max(1, (w - 3) * n.vel), 1.5)
+      if (n === this.hoverNote) {
+        g.strokeStyle = 'rgba(255,255,255,.95)'; g.lineWidth = 1.5
+        g.strokeRect(x + 0.75, y + 0.75, w - 1.5, hh - 1.5)
+      }
     }
 
     // clavier
-    g.fillStyle = '#101014'; g.fillRect(0, 0, KEY_W, gridH)
+    g.fillStyle = '#14171e'; g.fillRect(0, 0, KEY_W, gridH)
     for (let k = 108; k >= 12; k--) {
       const y = this.keyToY(k)
       if (y > gridH || y + this.keyH < 0) continue
       const black = isBlack(k)
-      g.fillStyle = black ? '#191920' : '#e8e8ee'
+      g.fillStyle = black ? '#1b1f27' : '#e6e9ef'
       g.fillRect(0, y, black ? KEY_W * 0.62 : KEY_W, this.keyH - 1)
       if (!black) {
-        g.strokeStyle = '#9a9aa8'; g.lineWidth = 1
+        g.strokeStyle = '#8f97a6'; g.lineWidth = 1
         g.strokeRect(0.5, y + 0.5, KEY_W - 1, this.keyH - 2)
       }
       if (k % 12 === 0) {
-        g.fillStyle = '#5a5a70'; g.font = '8px Tahoma, sans-serif'
+        g.fillStyle = '#6d778b'; g.font = '8px Tahoma, sans-serif'
         g.fillText(keyName(k), KEY_W - 22, y + this.keyH - 3)
       }
     }
 
     // bandeau de velocite
-    g.fillStyle = '#141419'; g.fillRect(0, gridH, W, VEL_H)
-    g.strokeStyle = '#31313b'; g.beginPath(); g.moveTo(0, gridH + 0.5); g.lineTo(W, gridH + 0.5); g.stroke()
-    g.fillStyle = '#6a6a80'; g.font = 'bold 8px Tahoma, sans-serif'
+    g.fillStyle = '#171a21'; g.fillRect(0, gridH, W, VEL_H)
+    g.strokeStyle = '#313743'; g.beginPath(); g.moveTo(0, gridH + 0.5); g.lineTo(W, gridH + 0.5); g.stroke()
+    g.fillStyle = '#6d778b'; g.font = 'bold 8px Tahoma, sans-serif'
     g.fillText('VELOCITE', 4, gridH + 12)
     for (const n of this.notes()) {
       const x = this.stepToX(n.t) + 1
       if (x > W || x < KEY_W - 8) continue
       const hgt = (VEL_H - 16) * n.vel
-      g.fillStyle = col
-      g.fillRect(x, gridH + VEL_H - 4 - hgt, Math.max(3, this.stepW - 4), hgt)
-      g.fillStyle = '#fff'
-      g.fillRect(x, gridH + VEL_H - 4 - hgt, Math.max(3, this.stepW - 4), 2)
+      const bw = Math.max(3, this.stepW - 4)
+      g.fillStyle = 'rgba(255,255,255,.05)'
+      g.fillRect(x, gridH + 14, bw, VEL_H - 18)
+      g.fillStyle = mix(col, '#ffffff', 0.1 + n.vel * 0.25)
+      g.fillRect(x, gridH + VEL_H - 4 - hgt, bw, hgt)
+      g.fillStyle = 'rgba(255,255,255,.85)'
+      g.fillRect(x, gridH + VEL_H - 4 - hgt, bw, 2)
     }
 
     // tete de lecture
@@ -370,8 +381,24 @@ export class PianoRoll {
   }
 }
 
+/** Melange deux couleurs, pour eclaircir une note selon sa velocite. */
+function mix(a: string, b: string, t: number): string {
+  const rgb = (h: string) => {
+    const m = h.replace('#', '')
+    const n = parseInt(m.length === 3 ? m.split('').map((c) => c + c).join('') : m, 16)
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
+  }
+  const [r1, g1, b1] = rgb(a), [r2, g2, b2] = rgb(b)
+  const k = clamp(t, 0, 1)
+  return `rgb(${Math.round(r1 + (r2 - r1) * k)},${Math.round(g1 + (g2 - g1) * k)},${Math.round(b1 + (b2 - b1) * k)})`
+}
+
 function shade(hex: string, amt: number): string {
-  const m = hex.replace('#', '')
+  const m = hex.replace('#', '').replace(/^rgb\((\d+),(\d+),(\d+)\)$/, '')
+  if (hex.startsWith('rgb')) {
+    const [r, g, b] = hex.match(/\d+/g)!.map(Number)
+    return `rgb(${clamp(r * (1 + amt), 0, 255) | 0},${clamp(g * (1 + amt), 0, 255) | 0},${clamp(b * (1 + amt), 0, 255) | 0})`
+  }
   const n = parseInt(m.length === 3 ? m.split('').map((c) => c + c).join('') : m, 16)
   const r = clamp(((n >> 16) & 255) * (1 + amt), 0, 255)
   const g = clamp(((n >> 8) & 255) * (1 + amt), 0, 255)

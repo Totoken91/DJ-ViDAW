@@ -77,6 +77,19 @@ dans le graphe audio, et le même code sert à l'écoute et au rendu hors-ligne.
   preset sonne dès qu'on le charge au lieu de sonner sec.
 - **36 presets** répartis en huit familles : basses, leads, plucks, nappes,
   claviers, cloches, arpèges, effets.
+
+Sa face avant est disposée **en flux de signal** — oscillateurs à gauche, filtre
+au centre, sortie à droite — sur des plaques de métal vissées à sérigraphie
+gravée. La taille d'une commande dit son importance : la fréquence de coupure
+est un grand cadran gradué, l'accord fin un bouton de trim. Et surtout, trois
+choses y sont vivantes plutôt que numériques :
+
+- **Un oscilloscope branché sur la vraie sortie du channel**, avec spectre,
+  synchronisé sur le passage par zéro pour que la trace ne glisse pas.
+- **Les deux enveloppes se manipulent par leurs points** : on attrape A, D ou R
+  et on tire. Plus de quatre potards à traduire mentalement en courbe.
+- **La réponse du filtre est tracée en direct**, la position des LFO tourne sur
+  leur forme, et chaque oscillateur montre sa propre onde.
 - **Clavier jouable** à la souris et au clavier d'ordinateur (`A/Q S D F G H J K`
   pour les blanches, `Z/W E T Y U` pour les noires), compatible AZERTY et QWERTY.
 
@@ -149,6 +162,17 @@ des tics de page d'accueil moderne, et ils n'ont rien à faire ici.
 - Dans le séquenceur, la grille laisse voir les temps **avant même de jouer** :
   les pas sur le temps sont plus clairs et chaque groupe de quatre est détaché.
 
+### Détails d'interface
+
+- Le **mixeur** est une console : tranches vissées sur un rail, master
+  distingué par sa matière. Chaque effet porte la couleur de sa famille
+  (filtre, temps, matière, dynamique) sur sa tranche gauche — on lit une chaîne
+  d'un coup d'œil sans lire les noms.
+- Le **piano roll** contraste franchement touches noires et blanches, et la
+  vélocité y module la luminosité de la note plutôt que d'y ajouter du blanc :
+  mélanger vers le blanc désature et efface l'identité du channel.
+- Les commandes sont regroupées en **blocs gravés** par famille d'actions.
+
 ### Fluidité
 
 La tête de lecture ne dépend plus d'un `setTimeout` par pas : elle se déduit de
@@ -156,6 +180,27 @@ l'horloge audio à chaque image, ce qui la rend exacte et supprime des centaines
 de timers par minute. Les canevas du piano roll et de la playlist ne sont
 redessinés que si leur fenêtre est réellement visible, et le redimensionnement
 est temporisé.
+
+### Le système de couleur
+
+Dix teintes arc-en-ciel à saturation maximale ne forment pas une palette, elles
+forment une guirlande — et c'est le premier symptôme d'une interface non
+dessinée. Tout passe désormais par un système :
+
+- **Neutres** tirés vers le bleu plutôt que du gris pur, sur dix crans. Un
+  neutre choisi se voit ; un neutre par défaut se subit.
+- **Accents par rôle** : l'ambre est la matière — les pas, les afficheurs, tout
+  ce qui porte une valeur ; le bleu désigne la sélection ; le vert ne dit qu'une
+  chose, *ça joue* ; le rouge, *ça enregistre*. Rien d'autre ne mérite d'être
+  coloré.
+- **Identité des channels** : dix teintes de valeur voisine et de saturation
+  moyenne, qui servent à distinguer des pistes, pas à décorer.
+- Les halos ne signalent plus que ce qui est actif.
+
+Dans le séquenceur, les pas ont donc **une seule couleur** et la vélocité se lit
+en luminosité, comme sur un séquenceur matériel. L'identité d'un channel tient
+dans sa réglette latérale. Sept teintes saturées côte à côte, c'était une
+guirlande.
 
 ### L'interface
 

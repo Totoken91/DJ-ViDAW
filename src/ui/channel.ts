@@ -32,6 +32,9 @@ export class ChannelEditor {
 
   show(id: string) { this.chId = id; this.render() }
 
+  /** Relaye le redimensionnement de la fenetre aux canevas fluides. */
+  resize() { this.synth?.resize(); const ch = this.ctx.channel(this.chId); if (ch?.sampler) this.paintWave(ch) }
+
   render() {
     const c = this.ctx
     const ch = c.channel(this.chId) ?? c.channel(c.selected)
@@ -328,7 +331,7 @@ export class ChannelEditor {
     g.fillRect(sp.end * w, 0, w - sp.end * w, hh)
 
     // marqueurs debut/fin
-    for (const [pos, col, label] of [[sp.start, '#00ff9c', 'S'], [sp.end, '#ff4fd8', 'E']] as [number, string, string][]) {
+    for (const [pos, col, label] of [[sp.start, '#5fa572', 'S'], [sp.end, '#c26d92', 'E']] as [number, string, string][]) {
       const x = pos * w
       g.fillStyle = col; g.fillRect(x - 1, 0, 2, hh)
       g.fillRect(x - 1, 0, 12, 12)
@@ -340,20 +343,20 @@ export class ChannelEditor {
     g.font = 'bold 8px Tahoma, sans-serif'
     sp.slices.forEach((s, i) => {
       const x = s * w
-      g.fillStyle = '#ffd23d'
+      g.fillStyle = '#ef9c39'
       g.fillRect(x, 0, 1, hh)
       g.fillRect(x, hh - 12, 13, 12)
       g.fillStyle = '#241a00'
       g.fillText(String(i + 1), x + 3, hh - 3)
     })
     if (sp.slices.length) {
-      g.fillStyle = '#ffd23d'
+      g.fillStyle = '#ef9c39'
       g.fillRect(0, hh - 12, 13, 12)
       g.fillStyle = '#241a00'; g.fillText('0', 4, hh - 3)
     }
 
     if (sp.reverse) {
-      g.fillStyle = 'rgba(255,79,216,.85)'; g.font = 'bold 11px Tahoma, sans-serif'
+      g.fillStyle = 'rgba(194,109,146,.9)'; g.font = 'bold 11px Tahoma, sans-serif'
       g.fillText('◀ INVERSE', 8, 18)
     }
   }

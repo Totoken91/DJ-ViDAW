@@ -17,6 +17,8 @@ export interface ChannelStrip {
   tail: AudioNode
   /** Effets integres au preset, pour les channels synthetiseur. */
   fx: SynthFxChain | null
+  /** Analyseur branche en derivation a la demande (afficheur du synthe). */
+  probe: AnalyserNode | null
   insert: number
 }
 
@@ -115,7 +117,7 @@ export function buildGraph(ctx: BaseAudioContext, p: Project, withAnalysers: boo
     }
     if (pan) { node.connect(pan); node = pan }
     node.connect(inserts[clamp(ch.insert, 0, inserts.length - 1)].input)
-    channels.set(ch.id, { input, gain, pan, tail: node, fx, insert: ch.insert })
+    channels.set(ch.id, { input, gain, pan, tail: node, fx, probe: null, insert: ch.insert })
   }
   p.channels.forEach(wireChannel)
 

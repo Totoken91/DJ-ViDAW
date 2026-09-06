@@ -1,135 +1,276 @@
 /* ============================================================
    DJ ViDAW — FACE AVANT DU SYNTHETISEUR
-   Metal bleute, serigraphie gravee, afficheurs ambres. Un
-   instrument doit ressembler a un instrument, pas a un formulaire.
+   Un instrument, pas un formulaire : une plaque de metal vissee,
+   des zones serigraphiees, un afficheur qui bouge, et une taille
+   de commande proportionnelle a son importance.
    ============================================================ */
 
 .syn {
-  --syn-panel: #2f3646;
-  --syn-panel-2: #262c39;
-  --syn-line: #171c26;
-  --syn-edge: rgba(255,255,255,.10);
+  --pl-hi: #4a5364;      /* haut de la plaque */
+  --pl-lo: #2b323f;      /* bas de la plaque */
+  --pl-deep: #1a1f28;    /* fond des puits */
+  --engrave: #99a5ba;
   --syn-text: #ccd6e6;
   --syn-dim: #7f8ca3;
-  --syn-amber: #ffbe4d;
   display: flex; flex-direction: column; height: 100%;
   color: var(--syn-text);
-  background: linear-gradient(180deg, #333b4c, #232936 60%, #1c212c);
+  background:
+    linear-gradient(180deg, #39424f, #232935 55%, #1a1f29);
 }
-.syn-scroll { flex: 1 1 auto; overflow: auto; padding: 8px; display: flex; flex-direction: column; gap: 8px; }
+.syn-scroll {
+  flex: 1 1 auto; overflow: auto; padding: 9px;
+  display: flex; flex-direction: column; gap: 9px;
+  container-type: inline-size;
+}
 
-/* ---------- navigateur de presets ---------- */
-.syn-browser {
-  display: flex; align-items: stretch; gap: 6px; flex-wrap: wrap;
-  padding: 6px 8px;
-  background: linear-gradient(180deg, #414a5e, #2b313f);
-  border: 1px solid var(--syn-line); border-radius: 5px;
-  box-shadow: inset 0 1px 0 var(--syn-edge);
+/* ---------- La plaque ----------
+   Metal brosse : un degrade vertical plus un tres fin bruit de lignes.
+   Les vis dans les angles sont ce qui fait qu'on lit "materiel". */
+.plate {
+  position: relative;
+  /* colonne flex : le corps peut alors s'etirer sur la hauteur de la rangee,
+     ce qu'un conteneur en bloc ne permet pas */
+  display: flex; flex-direction: column;
+  border: 1px solid #11151c; border-radius: 4px;
+  background:
+    repeating-linear-gradient(90deg, rgba(255,255,255,.022) 0 1px, transparent 1px 3px),
+    linear-gradient(180deg, var(--pl-hi), var(--pl-lo));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.16),
+    inset 0 -14px 22px rgba(0,0,0,.22),
+    0 1px 2px rgba(0,0,0,.5);
 }
-.syn-lcd {
-  flex: 1 1 200px; min-width: 180px;
-  display: flex; flex-direction: column; justify-content: center;
-  padding: 5px 10px;
-  background: #17120a; border: 1px solid #0b0805; border-radius: 3px;
-  box-shadow: inset 0 0 12px rgba(255,180,60,.22), inset 1px 1px 4px rgba(0,0,0,.9);
+.plate::before, .plate::after {
+  content: ''; position: absolute; width: 7px; height: 7px; border-radius: 50%;
+  background: radial-gradient(circle at 34% 30%, #9aa4b6, #545c6b 60%, #2b313c);
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.5), 0 1px 1px rgba(255,255,255,.13);
+  top: 6px; pointer-events: none;
 }
-.syn-lcd b {
-  font: 700 15px/1.2 "Courier New", monospace; letter-spacing: 1px;
-  color: #ffbe4d; text-shadow: 0 0 8px rgba(255,190,77,.75);
+.plate::before { left: 6px; }
+.plate::after { right: 6px; }
+
+/* serigraphie : le texte est grave dans la plaque, pas pose dessus */
+.plate > h4 {
+  flex: 0 0 auto;
+  margin: 0; padding: 5px 22px 4px;
+  font: 700 9px/1.5 Tahoma, "DejaVu Sans", Verdana, sans-serif;
+  letter-spacing: 2.4px; text-transform: uppercase;
+  color: var(--engrave);
+  text-shadow: 0 1px 0 rgba(255,255,255,.12), 0 -1px 0 rgba(0,0,0,.55);
+  display: flex; align-items: center; gap: 9px;
+  border-bottom: 1px solid rgba(0,0,0,.4);
+  box-shadow: 0 1px 0 rgba(255,255,255,.07);
 }
-.syn-lcd i {
-  font: 400 9px/1.4 "Courier New", monospace; font-style: normal;
-  color: #a37536; letter-spacing: .5px;
+.plate > h4 .sub {
+  letter-spacing: .3px; text-transform: none; font-weight: 400;
+  color: var(--syn-dim); text-shadow: none;
 }
-.syn-fams { display: flex; flex-wrap: wrap; gap: 3px; }
+.plate > h4 .spacer { flex: 1 1 auto; }
+.plate-body { display: flex; flex-wrap: wrap; gap: 7px; padding: 8px 11px 10px; align-items: flex-start; }
+
+/* un puits sombre : tout ce qui affiche s'y enfonce */
+.well {
+  background: var(--pl-deep);
+  border: 1px solid #0a0d12; border-radius: 3px;
+  box-shadow: inset 2px 2px 5px rgba(0,0,0,.75), 0 1px 0 rgba(255,255,255,.08);
+  padding: 4px;
+}
+
+/* ---------- Rail des presets ---------- */
+.syn-rail { display: flex; align-items: stretch; gap: 8px; padding: 7px 22px 8px; flex-wrap: wrap; }
+.patch-lcd {
+  flex: 1 1 230px; min-width: 190px;
+  display: flex; flex-direction: column; justify-content: center; gap: 2px;
+  padding: 7px 11px;
+  background: linear-gradient(180deg, #1b1409, #100c06);
+  border: 1px solid #070502; border-radius: 3px;
+  box-shadow: inset 0 0 18px rgba(255,170,50,.16), inset 2px 2px 5px rgba(0,0,0,.9);
+  position: relative; overflow: hidden;
+}
+/* la trame des afficheurs a matrice de points */
+.patch-lcd::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: repeating-linear-gradient(0deg, rgba(0,0,0,.28) 0 1px, transparent 1px 2px);
+}
+.patch-lcd b {
+  font: 700 16px/1.15 "Courier New", monospace; letter-spacing: 1.4px;
+  color: #ffbe4d; text-shadow: 0 0 9px rgba(255,190,77,.6);
+}
+.patch-lcd i {
+  font: 400 9px/1.35 "Courier New", monospace; font-style: normal;
+  color: #b07f38; letter-spacing: .4px;
+}
+.patch-lcd .fam { color: #7e5d2a; font-size: 8px; letter-spacing: 2px; }
+
+.syn-nav { display: flex; flex-direction: column; gap: 4px; justify-content: center; }
+.syn-nav .row { display: flex; gap: 3px; }
+
+.syn-fams { display: flex; flex-wrap: wrap; gap: 3px; align-content: center; max-width: 250px; }
 .syn-fam {
   padding: 3px 7px; cursor: pointer;
-  font: 700 9px/1.4 Tahoma, "DejaVu Sans", Verdana, sans-serif; letter-spacing: .6px;
-  color: var(--syn-dim); background: #232936;
-  border: 1px solid var(--syn-line); border-radius: 3px;
+  font: 700 8px/1.5 Tahoma, "DejaVu Sans", Verdana, sans-serif; letter-spacing: .9px;
+  color: var(--syn-dim);
+  background: linear-gradient(180deg, #333b49, #222833);
+  border: 1px solid #10141a; border-radius: 2px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.07);
 }
-.syn-fam:hover { color: #fff; }
-.syn-fam.on { background: linear-gradient(180deg, #5d6b88, #3c465b); color: #ffd489; }
+.syn-fam:hover { color: #e6ecf6; }
+.syn-fam.on {
+  background: linear-gradient(180deg, #d99a2b, #96660f);
+  color: #1b1204; border-color: #5c3f06;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.35);
+}
 .syn-list {
-  max-height: 96px; overflow: auto; flex: 1 1 190px; min-width: 170px;
-  background: #1b202a; border: 1px solid var(--syn-line); border-radius: 3px;
+  flex: 1 1 180px; min-width: 160px; max-height: 92px; overflow: auto;
+  background: var(--pl-deep); border: 1px solid #0a0d12; border-radius: 3px;
+  box-shadow: inset 2px 2px 5px rgba(0,0,0,.7);
 }
 .syn-item {
-  padding: 3px 8px; cursor: pointer;
-  font: 700 10px/1.5 Tahoma, "DejaVu Sans", Verdana, sans-serif; color: var(--syn-text);
-  border-bottom: 1px solid rgba(255,255,255,.04);
+  padding: 3px 9px; cursor: pointer;
+  font: 700 10px/1.55 Tahoma, "DejaVu Sans", Verdana, sans-serif; color: #b9c3d3;
+  border-bottom: 1px solid rgba(255,255,255,.035);
+  display: flex; align-items: center; gap: 6px;
 }
-.syn-item:hover { background: #2c3444; }
-.syn-item.on { background: linear-gradient(90deg, #6b4a12, #3a2a0c); color: #ffd489; }
-
-/* ---------- sections ---------- */
-.syn-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: stretch; }
-.syn-sec {
-  flex: 1 1 auto;
-  background: linear-gradient(180deg, var(--syn-panel), var(--syn-panel-2));
-  border: 1px solid var(--syn-line); border-radius: 5px;
-  box-shadow: inset 0 1px 0 var(--syn-edge);
-  display: flex; flex-direction: column;
+.syn-item::before {
+  content: ''; width: 5px; height: 5px; border-radius: 50%; flex: 0 0 5px;
+  background: #2c3341; box-shadow: inset 0 0 0 1px rgba(0,0,0,.6);
 }
-.syn-sec > h4 {
-  margin: 0; padding: 3px 9px;
-  font: 700 9px/1.7 Tahoma, "DejaVu Sans", Verdana, sans-serif;
-  letter-spacing: 1.8px; text-transform: uppercase; color: #93a2ba;
-  background: linear-gradient(180deg, rgba(255,255,255,.07), transparent);
-  border-bottom: 1px solid var(--syn-line);
-  display: flex; align-items: center; gap: 8px;
+.syn-item:hover { background: rgba(255,255,255,.05); color: #fff; }
+.syn-item.on { background: linear-gradient(90deg, rgba(217,154,43,.3), transparent); color: #ffd489; }
+.syn-item.on::before { background: #ffbe4d; box-shadow: 0 0 6px rgba(255,190,77,.9); }
+
+/* ---------- Grille principale : le signal va de gauche a droite ---------- */
+.syn-grid {
+  display: grid; gap: 9px;
+  grid-template-columns: minmax(300px, 1.45fr) minmax(210px, .95fr) minmax(170px, .75fr);
+  align-items: stretch;
 }
-.syn-sec > h4 .sub { letter-spacing: .4px; color: var(--syn-dim); font-weight: 400; text-transform: none; }
-.syn-body { display: flex; flex-wrap: wrap; gap: 7px; padding: 7px 9px 10px; align-items: flex-start; }
-.syn-col { display: flex; flex-direction: column; gap: 5px; }
+@container (max-width: 900px) { .syn-grid { grid-template-columns: 1fr 1fr; } }
+@container (max-width: 620px) { .syn-grid { grid-template-columns: 1fr; } }
+.syn-pair { display: grid; gap: 9px; grid-template-columns: 1fr 1fr; }
+@container (max-width: 720px) { .syn-pair { grid-template-columns: 1fr; } }
+.syn-quad { display: grid; gap: 9px; grid-template-columns: repeat(4, 1fr); }
+@container (max-width: 1000px) { .syn-quad { grid-template-columns: 1fr 1fr; } }
+@container (max-width: 560px) { .syn-quad { grid-template-columns: 1fr; } }
 
-.syn .knob-label { color: #92a1b8; }
-.syn .knob-val { color: #ffbe4d; }
-
-/* ---------- selecteurs de forme d'onde ---------- */
-.syn-waves { display: flex; gap: 2px; flex-wrap: wrap; }
+/* ---------- Modules d'oscillateur ---------- */
+.osc-mod { display: flex; flex-direction: column; gap: 5px; }
+.osc-mod + .osc-mod { border-top: 1px solid rgba(0,0,0,.4); box-shadow: 0 -1px 0 rgba(255,255,255,.05); padding-top: 6px; }
+.osc-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.osc-tag {
+  font: 900 13px/1 "Trebuchet MS", Tahoma, sans-serif; letter-spacing: 1px;
+  color: #e7edf7; text-shadow: 0 1px 0 rgba(0,0,0,.6);
+  width: 16px; text-align: center;
+}
+.wv-thumb {
+  display: block; border: 1px solid #0a0d12; border-radius: 2px;
+  box-shadow: inset 1px 1px 3px rgba(0,0,0,.75);
+}
+.syn-waves { display: flex; gap: 2px; }
 .syn-wave {
-  width: 26px; height: 22px; display: grid; place-items: center; cursor: pointer;
-  color: #8e9cb3; background: #1e2431;
-  border: 1px solid var(--syn-line); border-radius: 3px;
+  width: 25px; height: 21px; display: grid; place-items: center; cursor: pointer;
+  color: #8e9cb3;
+  background: linear-gradient(180deg, #333b49, #222833);
+  border: 1px solid #10141a; border-radius: 2px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.07);
 }
 .syn-wave:hover { color: #fff; }
-.syn-wave.on { color: #101720; background: linear-gradient(180deg, #ffd489, #d99a2b); }
+.syn-wave.on {
+  color: #1b1204; background: linear-gradient(180deg, #ffd489, #d99a2b);
+  border-color: #5c3f06; box-shadow: inset 0 1px 0 rgba(255,255,255,.45);
+}
+.osc-knobs { display: flex; flex-wrap: wrap; gap: 5px 4px; }
 
+/* ---------- Selecteurs et interrupteurs ---------- */
 .syn-pick {
   font: 700 9px/1 Tahoma, "DejaVu Sans", Verdana, sans-serif;
-  color: var(--syn-text); background: #1e2431;
-  border: 1px solid var(--syn-line); border-radius: 3px;
+  color: var(--syn-text);
+  background: linear-gradient(180deg, #333b49, #232a36);
+  border: 1px solid #10141a; border-radius: 2px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
   padding: 4px 5px; cursor: pointer;
 }
 .syn-toggle {
-  display: inline-flex; align-items: center; gap: 5px; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
   font: 700 9px/1 Tahoma, "DejaVu Sans", Verdana, sans-serif; color: #a9b6cb;
-  padding: 4px 7px; background: #1e2431;
-  border: 1px solid var(--syn-line); border-radius: 3px;
+  padding: 5px 8px;
+  background: linear-gradient(180deg, #333b49, #232a36);
+  border: 1px solid #10141a; border-radius: 2px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
 }
-.syn-toggle.on { background: linear-gradient(180deg, #3f7a4e, #235235); color: #d6ffe2; }
+/* une vraie diode : eteinte elle reste visible, allumee elle rayonne peu */
+.syn-toggle::before {
+  content: ''; width: 6px; height: 6px; border-radius: 50%;
+  background: #1d232c; box-shadow: inset 0 0 0 1px rgba(0,0,0,.7);
+}
+.syn-toggle.on { color: #dff3e4; }
+.syn-toggle.on::before { background: #4bbf5f; box-shadow: inset 0 0 0 1px rgba(0,0,0,.5), 0 0 5px rgba(75,191,95,.8); }
 
-/* ---------- courbes ---------- */
-.syn-curve {
-  display: block; border: 1px solid var(--syn-line); border-radius: 3px;
-  background: #14181f;
+/* la courbe du filtre grandit avec la rangee, plutot que de laisser un vide */
+/* align-items: flex-start herite de .plate-body reduirait ces enfants a la
+   largeur de leur contenu — nulle, puisque leur canevas est hors du flux. */
+.filter-plate .plate-body { flex: 1 1 auto; display: flex; flex-direction: column; gap: 8px; min-height: 0; align-items: stretch; }
+.filter-well { flex: 1 1 auto; min-height: 62px; position: relative; }
+.filter-well .filter-cv { position: absolute; inset: 4px; width: calc(100% - 8px); height: calc(100% - 8px); }
+
+/* ---------- Enveloppes ---------- */
+.env-wrap { position: relative; touch-action: none; }
+.env-wrap.grabbing { cursor: grabbing; }
+/* Deux canevas differents, deux noms : la courbe du filtre n'est pas une
+   enveloppe, et les confondre a deja coute une fausse piste. */
+.env-cv, .filter-cv {
+  display: block; width: 100%; border: 1px solid #0a0d12; border-radius: 3px;
+  box-shadow: inset 2px 2px 5px rgba(0,0,0,.75);
 }
 
-/* ---------- clavier ---------- */
+/* ---------- Afficheur ---------- */
+.scope {
+  flex: 1 1 auto; min-height: 118px; position: relative;
+  border: 1px solid #0a0d12; border-radius: 3px; overflow: hidden;
+  background: #080b11;
+  box-shadow: inset 0 0 20px rgba(60,200,120,.06), inset 2px 2px 6px rgba(0,0,0,.85);
+}
+.scope::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background:
+    repeating-linear-gradient(0deg, rgba(0,0,0,.22) 0 1px, transparent 1px 3px),
+    radial-gradient(110% 100% at 50% 45%, transparent 55%, rgba(0,0,0,.6) 100%);
+}
+ /* Un canevas en height:100% dans un parent de hauteur automatique
+    reinjecte sa propre hauteur a chaque image et fait enfler la plaque.
+    On le sort du flux : il ne mesure plus rien, il remplit. */
+.scope-cv { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+.scope-plate { display: flex; flex-direction: column; }
+.scope-plate .plate-body { flex: 1 1 auto; display: flex; flex-direction: column; gap: 6px; min-height: 0; align-items: stretch; }
+.scope-meta { flex: 0 0 auto; }
+.scope-meta {
+  display: flex; justify-content: space-between; gap: 6px;
+  font: 400 9px/1.4 "Courier New", monospace; color: var(--syn-dim);
+}
+.scope-meta b { color: #8fd7aa; font-weight: 700; }
+
+.lfo-cv {
+  display: block; border: 1px solid #0a0d12; border-radius: 2px;
+  box-shadow: inset 1px 1px 3px rgba(0,0,0,.75);
+}
+
+/* ---------- Clavier ---------- */
+.syn-kbhost { flex: 0 0 auto; }
 .syn-keys {
-  position: relative; height: 74px; flex: 0 0 auto; margin: 0 8px 8px;
-  border: 1px solid var(--syn-line); border-radius: 4px; overflow: hidden;
-  background: #0f131a; touch-action: none; user-select: none;
+  position: relative; height: 78px; flex: 0 0 auto; margin: 0 9px 9px;
+  border: 1px solid #0a0d12; border-radius: 3px; overflow: hidden;
+  background: #0b0e14; touch-action: none; user-select: none;
+  box-shadow: inset 0 3px 8px rgba(0,0,0,.7);
 }
 .syn-key {
   position: absolute; top: 0; bottom: 0;
-  border-right: 1px solid #8f97a6;
-  background: linear-gradient(180deg, #fdfdfd 0 78%, #dcdfe6 100%);
+  border-right: 1px solid #8b93a2;
+  background: linear-gradient(180deg, #fbfcfe 0 72%, #d6dae2 92%, #b9bec8 100%);
 }
 .syn-key.black {
-  top: 0; height: 62%; border: 1px solid #05070b; border-radius: 0 0 2px 2px;
-  background: linear-gradient(180deg, #3a4150 0 70%, #10141c 100%);
+  top: 0; height: 61%; border: 1px solid #05070b; border-radius: 0 0 2px 2px;
+  background: linear-gradient(180deg, #39404e 0 66%, #12161e 100%);
+  box-shadow: 1px 2px 3px rgba(0,0,0,.55);
   z-index: 2;
 }
 .syn-key.on { background: linear-gradient(180deg, #ffd489 0 70%, #d99a2b 100%); }
@@ -138,10 +279,10 @@
   position: absolute; bottom: 3px; left: 0; right: 0; text-align: center;
   font: 700 8px/1 Tahoma, "DejaVu Sans", Verdana, sans-serif; color: #7b8698; pointer-events: none;
 }
-.syn-key.black .lbl { color: #96a2b6; }
 .syn-kbbar {
-  display: flex; align-items: center; gap: 6px; padding: 0 8px 6px;
+  display: flex; align-items: center; gap: 6px; padding: 0 9px 6px;
   font: 400 9px/1.5 Tahoma, "DejaVu Sans", Verdana, sans-serif; color: var(--syn-dim);
+  flex-wrap: wrap;
 }
-
-.syn-kbhost { flex: 0 0 auto; }
+.syn .knob-label { color: #8e9bb1; }
+.syn .knob-val { color: #ffbe4d; }

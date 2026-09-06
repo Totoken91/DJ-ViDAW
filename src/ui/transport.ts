@@ -52,12 +52,12 @@ export class Transport {
 
     const swing = knob({
       min: 0, max: 0.5, value: c.project.swing, def: 0.08, label: 'SWING', size: 30,
-      color: '#ff4fd8', format: (v) => `${Math.round(v * 200)}%`,
+      color: '#c26d92', format: (v) => `${Math.round(v * 200)}%`,
       onInput: (v) => { c.project.swing = v; c.markDirty() },
     })
     const master = knob({
       min: 0, max: 1.2, value: c.project.masterVol, def: 0.8, label: 'MASTER', size: 32,
-      color: '#ffd23d', format: (v) => `${Math.round(v * 100)}`,
+      color: '#ef9c39', ticks: 9, format: (v) => `${Math.round(v * 100)}`,
       onInput: (v) => { c.project.masterVol = v; c.sync(); c.markDirty() },
     })
 

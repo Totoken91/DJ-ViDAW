@@ -505,7 +505,7 @@ function buildUI() {
      'Clic pour poser un motif · clic droit pour effacer · glisser pour deplacer · Maj+molette pour les pistes')
   mk('mixer', 'Mixeur', 'mixer', mixer.el, 790, 8, 620, 570, undefined,
      'Choisis une tranche, puis ajoute ses effets en dessous')
-  mk('channel', 'Instrument', 'wrench', chEditor.el, 170, 74, 800, 600, undefined,
+  mk('channel', 'Instrument', 'wrench', chEditor.el, 170, 74, 860, 620, () => chEditor.resize(),
      'F2 rouvre cette fenetre · sur un synthetiseur, le clavier de l\'ordinateur joue les notes')
   mk('browser', 'Navigateur de samples', 'folder', browser.el, 120, 60, 390, 430, undefined,
      'Glisse un fichier audio n\'importe ou sur le bureau pour l\'importer')

@@ -19,6 +19,10 @@ export interface KnobOpts {
   format?: (v: number) => string
   onInput: (v: number) => void
   color?: string
+  /** Graduations autour du cadran. Automatique au-dela de 48 px. */
+  ticks?: number
+  /** Cache le libelle sous le cadran (quand la section le porte deja). */
+  bare?: boolean
 }
 
 export function knob(o: KnobOpts): HTMLElement {
@@ -34,9 +38,9 @@ export function knob(o: KnobOpts): HTMLElement {
   cv.style.width = `${size}px`
   cv.style.height = `${size}px`
   const readout = h('div', { class: 'knob-val' })
-  const wrap = h('div', { class: 'knob' },
+  const wrap = h('div', { class: `knob${size >= 52 ? ' knob-big' : ''}` },
     cv,
-    o.label ? h('div', { class: 'knob-label' }, o.label) : null,
+    o.label && !o.bare ? h('div', { class: 'knob-label' }, o.label) : null,
     readout,
   )
 
@@ -50,9 +54,28 @@ export function knob(o: KnobOpts): HTMLElement {
   function paint() {
     const n = norm(value)
     const s = size * 2
-    const r = s * 0.36
+    const ticks = o.ticks ?? (size >= 48 ? 11 : 0)
+    const r = s * (ticks ? 0.315 : 0.36)
     const cx = s / 2, cy = s / 2
+    const a0 = Math.PI * 0.75, a1 = Math.PI * 2.25
     ctx.clearRect(0, 0, s, s)
+
+    // graduations gravees autour du cadran
+    if (ticks) {
+      for (let i = 0; i < ticks; i++) {
+        const t = i / (ticks - 1)
+        const a = a0 + (a1 - a0) * t
+        const major = i === 0 || i === ticks - 1 || i === (ticks - 1) / 2
+        const r0 = r + s * 0.155, r1 = r0 + s * (major ? 0.075 : 0.048)
+        ctx.beginPath()
+        ctx.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0)
+        ctx.lineTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1)
+        ctx.strokeStyle = major ? 'rgba(226,232,244,.62)' : 'rgba(160,172,192,.34)'
+        ctx.lineWidth = major ? s * 0.022 : s * 0.014
+        ctx.lineCap = 'butt'
+        ctx.stroke()
+      }
+    }
 
     // corps metal brosse Y2K
     const grad = ctx.createLinearGradient(0, 0, 0, s)
@@ -65,19 +88,29 @@ export function knob(o: KnobOpts): HTMLElement {
     ctx.fillStyle = grad; ctx.fill()
     ctx.lineWidth = 2; ctx.strokeStyle = '#20232b'; ctx.stroke()
 
+    // molette crantee sur les grands cadrans
+    if (ticks) {
+      const knurl = 36
+      for (let i = 0; i < knurl; i++) {
+        const a = (i / knurl) * Math.PI * 2
+        ctx.beginPath()
+        ctx.moveTo(cx + Math.cos(a) * r * 0.9, cy + Math.sin(a) * r * 0.9)
+        ctx.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r)
+        ctx.strokeStyle = i % 2 ? 'rgba(255,255,255,.13)' : 'rgba(0,0,0,.28)'
+        ctx.lineWidth = s * 0.012
+        ctx.stroke()
+      }
+    }
+
     // rail
-    const a0 = Math.PI * 0.75, a1 = Math.PI * 2.25
     ctx.beginPath(); ctx.arc(cx, cy, r + s * 0.11, a0, a1)
-    ctx.lineWidth = s * 0.09; ctx.strokeStyle = 'rgba(0,0,0,.45)'; ctx.lineCap = 'round'; ctx.stroke()
+    ctx.lineWidth = s * (ticks ? 0.062 : 0.09); ctx.strokeStyle = 'rgba(0,0,0,.5)'; ctx.lineCap = 'round'; ctx.stroke()
 
     // arc de valeur
     ctx.beginPath(); ctx.arc(cx, cy, r + s * 0.11, a0, a0 + (a1 - a0) * n)
-    ctx.strokeStyle = o.color ?? '#00ff9c'
-    ctx.lineWidth = s * 0.075
-    ctx.shadowColor = o.color ?? '#00ff9c'
-    ctx.shadowBlur = s * 0.12
+    ctx.strokeStyle = o.color ?? '#ef9c39'
+    ctx.lineWidth = s * (ticks ? 0.05 : 0.075)
     ctx.stroke()
-    ctx.shadowBlur = 0
 
     // aiguille
     const ang = a0 + (a1 - a0) * n
@@ -182,7 +215,7 @@ export function meter(analyser: AnalyserNode | null, w = 10, hgt = 120): { el: H
       for (let i = 0; i < segs; i++) {
         const n = i / segs
         if (n > lvl) { ctx.fillStyle = 'rgba(255,255,255,.05)' }
-        else ctx.fillStyle = n > 0.86 ? '#ff2e4d' : n > 0.66 ? '#ffd23d' : '#31ff87'
+        else ctx.fillStyle = n > 0.86 ? '#d94f4f' : n > 0.66 ? '#e0bb3c' : '#4bbf5f'
         const y = H - (i + 1) * (H / segs) + 2
         ctx.fillRect(1, y, W - 2, H / segs - 3)
       }

@@ -44,11 +44,11 @@ export class Scope {
     g.fillRect(0, 0, W, H)
 
     // fond tramé
-    g.fillStyle = 'rgba(0,255,156,.055)'
+    g.fillStyle = 'rgba(75,191,95,.06)'
     for (let y = 0; y < H; y += 2) for (let x = (y / 2) % 2; x < W; x += 2) g.fillRect(x, y, 1, 1)
 
     if (!this.analyser) {
-      g.fillStyle = '#1d6b48'; g.font = 'bold 9px monospace'
+      g.fillStyle = '#2f6b4a'; g.font = 'bold 9px monospace'
       g.fillText('NO SIGNAL', 6, H / 2)
       return
     }
@@ -67,7 +67,7 @@ export class Scope {
         const x = i * (bw + 1)
         for (let y = 0; y < hgt; y += 2) {
           const n = y / (H - 4)
-          g.fillStyle = n > 0.78 ? '#ff2e4d' : n > 0.5 ? '#ffd23d' : '#00ff9c'
+          g.fillStyle = n > 0.78 ? '#d94f4f' : n > 0.5 ? '#e0bb3c' : '#4bbf5f'
           // tramage : une colonne sur deux decalee
           for (let px = 0; px < bw; px++) {
             if ((px + y / 2) % 2 === 0 || n < 0.6) g.fillRect(x + px, H - 2 - y, 1, 1)
@@ -77,7 +77,7 @@ export class Scope {
       }
     } else if (this.mode === 'scope') {
       this.analyser.getByteTimeDomainData(this.time)
-      g.fillStyle = '#00ff9c'
+      g.fillStyle = '#4bbf5f'
       const n = this.analyser.fftSize
       for (let x = 0; x < W; x++) {
         const i = Math.floor((x / W) * n)
@@ -104,7 +104,7 @@ export class Scope {
         for (let y = 0; y < hgt; y += 1) {
           if ((x + y) % 2) continue
           const n = y / H
-          g.fillStyle = n > 0.6 ? '#ff4fd8' : '#4fe9ff'
+          g.fillStyle = n > 0.6 ? '#c26d92' : '#4ea3e8'
           g.fillRect(x, H / 2 - y / 2, 1, 1)
           g.fillRect(x, H / 2 + y / 2, 1, 1)
         }
@@ -112,7 +112,7 @@ export class Scope {
     }
 
     // cadre
-    g.strokeStyle = 'rgba(0,255,156,.28)'; g.lineWidth = 1
+    g.strokeStyle = 'rgba(75,191,95,.24)'; g.lineWidth = 1
     g.strokeRect(0.5, 0.5, W - 1, H - 1)
   }
 }

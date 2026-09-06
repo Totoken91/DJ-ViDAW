@@ -16,18 +16,41 @@
   --xp-green: #3dab3d;
   --taskbar-h: 38px;
 
-  --fl-bg: #2b2b2f;
-  --fl-panel: #3a3a40;
-  --fl-panel-2: #46464e;
-  --fl-line: #1c1c20;
-  --fl-text: #dfe2ea;
-  /* Le vert ne veut dire qu'une chose : actif. L'ambre est la couleur des
-     afficheurs, le rose celle des actions qui sortent du logiciel, le rouge
-     l'enregistrement. Une couleur qui signifie tout ne signifie rien. */
-  --neon: #00ff9c;
-  --neon-2: #ff4fd8;
-  --neon-3: #4fe9ff;
-  --amber: #ffcb5c;
+  /* ---- Neutres ----
+     Des gris tires vers le bleu plutot que du gris pur : un neutre choisi
+     se voit, un neutre par defaut se subit. */
+  --ink-900: #12141a;
+  --ink-850: #171a21;
+  --ink-800: #1d212a;
+  --ink-700: #262b36;
+  --ink-600: #313743;
+  --ink-500: #3d4453;
+  --ink-400: #4e5666;
+  --ink-300: #6d778b;
+  --ink-200: #98a2b4;
+  --ink-100: #c5cbd8;
+
+  /* ---- Accents, par role ----
+     L'ambre est la matiere : les pas, les afficheurs, tout ce qui porte une
+     valeur. Le bleu designe la selection. Le vert ne dit qu'une chose :
+     ca joue. Le rouge, ca enregistre. Rien d'autre ne merite de couleur. */
+  --hot: #ef9c39;
+  --hot-lit: #ffc46b;
+  --hot-deep: #8a4f12;
+  --sel: #4ea3e8;
+  --go: #4bbf5f;
+  --rec: #d94f4f;
+  --warn: #e0bb3c;
+
+  --fl-bg: var(--ink-800);
+  --fl-panel: var(--ink-600);
+  --fl-panel-2: var(--ink-500);
+  --fl-line: var(--ink-900);
+  --fl-text: #d3d9e4;
+  --neon: var(--go);
+  --neon-2: #c26d92;
+  --neon-3: var(--sel);
+  --amber: var(--hot-lit);
 }
 
 * { box-sizing: border-box; }
@@ -231,7 +254,7 @@ html, body {
 }
 .sm-avatar {
   width: 40px; height: 40px; border-radius: 4px;
-  background: linear-gradient(135deg, #ffd23d, #ff4fd8 60%, #4fe9ff);
+  background: linear-gradient(150deg, #5b8fc4, #4f9e9e 55%, #5fa572);
   border: 2px solid #fff; display: grid; place-items: center; font-size: 22px;
 }
 .sm-cols { display: flex; background: #fff; }
@@ -284,7 +307,7 @@ html, body {
 
 /* ---------- Accessibilite : le focus doit se voir ---------- */
 :focus-visible {
-  outline: 2px solid #ffd23d;
+  outline: 2px solid var(--warn);
   outline-offset: 1px;
 }
 .win-btn:focus-visible { outline-color: #fff; }

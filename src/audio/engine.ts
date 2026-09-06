@@ -187,6 +187,21 @@ export class Engine {
     }
   }
 
+  /** Branche (une seule fois) un analyseur sur la sortie d'un channel.
+      Il ne modifie pas le son : c'est une derivation. */
+  probe(chId: string): AnalyserNode | null {
+    const strip = this.graph?.channels.get(chId)
+    if (!strip || !this.ctx) return null
+    if (!strip.probe) {
+      const an = this.ctx.createAnalyser()
+      an.fftSize = 2048
+      an.smoothingTimeConstant = 0.55
+      strip.tail.connect(an)
+      strip.probe = an
+    }
+    return strip.probe
+  }
+
   /* Preecoute d'une note isolee (clic sur le piano roll, aperçu de channel) */
   async preview(chId: string, key = 60, len = 4, vel = 0.9) {
     await this.init()

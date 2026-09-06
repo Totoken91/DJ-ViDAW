@@ -124,7 +124,7 @@ export class Rack {
     this.rows.clear()
 
     for (const ch of c.project.channels) {
-      const led = h('span', { class: 'ch-led', style: { background: ch.color, color: ch.color } })
+      const led = h('span', { class: 'ch-led', style: { background: ch.color } })
       const nameEl = h('span', { class: 'ch-name' }, ch.name)
       const btn = h('div', {
         class: 'ch-btn',
@@ -136,7 +136,12 @@ export class Rack {
 
       const mute = h('button', {
         class: `m${ch.mute ? ' on m' : ''}`, title: 'Muet', dataset: { tip: `Rend ${ch.name} silencieux` },
-        onclick: () => { ch.mute = !ch.mute; mute.classList.toggle('on', ch.mute); mute.classList.toggle('m', ch.mute); c.sync(); c.markDirty() },
+        onclick: () => {
+          ch.mute = !ch.mute
+          mute.classList.toggle('on', ch.mute); mute.classList.toggle('m', ch.mute)
+          this.rows.get(ch.id)?.row.classList.toggle('muted', ch.mute)
+          c.sync(); c.markDirty()
+        },
       }, 'M')
       const solo = h('button', {
         class: ch.solo ? 'on' : '', title: 'Solo', dataset: { tip: `N'entend plus que ${ch.name}` },
@@ -153,7 +158,6 @@ export class Rack {
       for (let t = 0; t < steps; t++) {
         const s = h('div', {
           class: `step${t % 4 === 0 ? ' beat' : ''}${t % 16 === 0 ? ' bar4' : ''}`,
-          style: { '--sc': ch.color },
           dataset: { t: String(t) },
         })
         s.addEventListener('pointerdown', (e) => {
@@ -169,7 +173,7 @@ export class Rack {
         stepEls.push(s)
       }
 
-      const row = h('div', { class: `rack-row${c.selected === ch.id ? ' sel' : ''}` },
+      const row = h('div', { class: `rack-row${c.selected === ch.id ? ' sel' : ''}${ch.mute ? ' muted' : ''}` },
         btn, h('div', { class: 'mini' }, mute, solo, roll, del), grid)
       this.scroll.appendChild(row)
       this.rows.set(ch.id, { row, steps: stepEls })
@@ -240,7 +244,10 @@ export class Rack {
   private paintStep(ch: Channel, t: number, el: HTMLElement) {
     const n = this.noteAt(ch.id, t)
     el.classList.toggle('on', !!n)
-    el.style.setProperty('--vel', n ? `${Math.round(n.vel * 74)}%` : '0%')
+    // --v porte la velocite : elle module la luminosite du pas et la
+    // longueur de la reglette du bas, plutot que la teinte
+    if (n) el.style.setProperty('--v', n.vel.toFixed(2))
+    else el.style.removeProperty('--v')
   }
 
   private paintRow(ch: Channel) {

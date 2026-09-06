@@ -133,7 +133,7 @@ export class Playlist {
     const p = this.ctx.project
 
     g.clearRect(0, 0, W, H)
-    g.fillStyle = '#1b1b21'; g.fillRect(0, 0, W, H)
+    g.fillStyle = '#1d212a'; g.fillRect(0, 0, W, H)
 
     const bars = Math.ceil((W - HEAD_W + this.scrollX) / this.barW) + 1
     const bar0 = Math.floor(this.scrollX / this.barW)
@@ -143,14 +143,14 @@ export class Playlist {
       const y = RULER_H + t * this.trackH - this.scrollY
       if (y > H) break
       if (y + this.trackH < RULER_H) continue
-      g.fillStyle = t % 2 ? '#20202a' : '#1d1d25'
+      g.fillStyle = t % 2 ? '#242935' : '#1f242e'
       g.fillRect(HEAD_W, y, W - HEAD_W, this.trackH - 1)
     }
     // grille verticale
     for (let b = bar0; b < bar0 + bars; b++) {
       const x = HEAD_W + b * this.barW - this.scrollX
       if (x < HEAD_W) continue
-      g.fillStyle = b % 4 === 0 ? '#5b5b72' : '#2f2f3b'
+      g.fillStyle = b % 4 === 0 ? 'rgba(255,255,255,.3)' : 'rgba(255,255,255,.08)'
       g.fillRect(Math.round(x), RULER_H, b % 4 === 0 ? 2 : 1, H - RULER_H)
     }
 
@@ -183,30 +183,30 @@ export class Playlist {
     }
 
     // regle
-    g.fillStyle = '#2c2c36'; g.fillRect(0, 0, W, RULER_H)
-    g.strokeStyle = '#14141a'; g.beginPath(); g.moveTo(0, RULER_H - .5); g.lineTo(W, RULER_H - .5); g.stroke()
+    g.fillStyle = '#2b3140'; g.fillRect(0, 0, W, RULER_H)
+    g.strokeStyle = '#12141a'; g.beginPath(); g.moveTo(0, RULER_H - .5); g.lineTo(W, RULER_H - .5); g.stroke()
     g.font = 'bold 9px Tahoma, sans-serif'
     for (let b = bar0; b < bar0 + bars; b++) {
       const x = HEAD_W + b * this.barW - this.scrollX
       if (x < HEAD_W) continue
-      g.fillStyle = b % 4 === 0 ? '#e6e9f2' : '#7a7a90'
+      g.fillStyle = b % 4 === 0 ? '#e6e9f2' : '#6d778b'
       g.fillRect(x, RULER_H - (b % 4 === 0 ? 9 : 5), 1, b % 4 === 0 ? 9 : 5)
       if (b % 4 === 0) g.fillText(String(b + 1), x + 3, 11)
     }
 
     // en-tetes de piste
-    g.fillStyle = '#26262f'; g.fillRect(0, RULER_H, HEAD_W, H - RULER_H)
+    g.fillStyle = '#262b36'; g.fillRect(0, RULER_H, HEAD_W, H - RULER_H)
     for (let t = 0; t < TRACKS; t++) {
       const y = RULER_H + t * this.trackH - this.scrollY
       if (y > H) break
       if (y + this.trackH < RULER_H) continue
-      g.strokeStyle = '#14141a'
+      g.strokeStyle = '#12141a'
       g.beginPath(); g.moveTo(0, y + this.trackH - .5); g.lineTo(HEAD_W, y + this.trackH - .5); g.stroke()
-      g.fillStyle = '#9aa0b0'; g.font = 'bold 9px Tahoma, sans-serif'
+      g.fillStyle = '#98a2b4'; g.font = 'bold 9px Tahoma, sans-serif'
       g.fillText(`PISTE ${t + 1}`, 8, y + this.trackH / 2 + 3)
     }
-    g.fillStyle = '#1b1b21'; g.fillRect(0, 0, HEAD_W, RULER_H)
-    g.fillStyle = '#00ff9c'; g.font = 'bold 10px Tahoma, sans-serif'
+    g.fillStyle = '#1d212a'; g.fillRect(0, 0, HEAD_W, RULER_H)
+    g.fillStyle = '#ef9c39'; g.font = 'bold 10px Tahoma, sans-serif'
     g.fillText('MESURE', 8, 14)
 
     // tete de lecture
