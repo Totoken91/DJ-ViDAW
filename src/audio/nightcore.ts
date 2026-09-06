@@ -11,14 +11,19 @@
 import { clamp, midiToRate } from '../core/state'
 import { makeIR } from './fx'
 import { driveCurve, type F32 } from './voices'
+import { buildEq, defaultEq, eqAutoGain, type EqBand } from './eq'
 
 export interface NcSettings {
   mode: 'tape' | 'free'
   speed: number     // 0.5 .. 2.0  (1 = original)
   pitch: number     // demi-tons, mode libre uniquement
   cut: number       // passe-haut, Hz
-  bass: number      // dB, plateau grave
-  air: number       // dB, plateau aigu
+  eq: EqBand[]      // cinq bandes parametriques
+  tilt: number      // dB, bascule spectrale grave <-> aigu
+  autoTilt: boolean // la bascule suit la vitesse (anti-etouffement)
+  exciter: number   // 0..1, harmoniques d'aigu reconstruites
+  glue: number      // 0..1, compression de cohesion
+  autoGain: boolean // compense le niveau ajoute par l'egaliseur
   drive: number     // 0..1
   width: number     // 0..2  (1 = inchange)
   rotate: number    // Hz, panoramique automatique facon "8D"
@@ -29,32 +34,66 @@ export interface NcSettings {
 }
 
 export function defaultNc(): NcSettings {
+  const eq = defaultEq()
+  eq[0].g = 2.5   // un peu de grave
+  eq[4].g = 2     // un peu d'air
   return {
-    mode: 'tape', speed: 1.3, pitch: 0, cut: 30, bass: 2.5, air: 2,
+    mode: 'tape', speed: 1.3, pitch: 0, cut: 30,
+    eq, tilt: 0, autoTilt: true, exciter: 0.12, glue: 0.2, autoGain: true,
     drive: 0.08, width: 1.25, rotate: 0, wobble: 0.06,
     reverb: 0.22, size: 2.2, gain: 1,
   }
+}
+
+/** Fabrique un jeu de bandes a partir des cinq gains d'un preset. */
+function eqOf(gains: number[], tweak?: Partial<EqBand>[]): EqBand[] {
+  const bands = defaultEq()
+  gains.forEach((g, i) => { if (bands[i]) bands[i].g = g })
+  tweak?.forEach((t, i) => { if (bands[i] && t) Object.assign(bands[i], t) })
+  return bands
+}
+
+/** Bascule spectrale automatique.
+    Ralentir un morceau descend tout son spectre : il s'etouffe. Accelerer
+    fait l'inverse et le rend criard. On compense dans le sens contraire,
+    a peu pres a moitie — corriger a 100 % annulerait l'effet recherche. */
+export function autoTiltOf(speed: number): number {
+  return clamp(-12 * Math.log2(clamp(speed, 0.25, 4)) * 0.55, -7, 7)
 }
 
 export interface NcPreset { name: string; tag: string; s: Partial<NcSettings> }
 
 export const NC_PRESETS: NcPreset[] = [
   { name: 'NIGHTCORE', tag: 'le classique, 1.30x', s: {
-    mode: 'tape', speed: 1.3, bass: 2.5, air: 3, reverb: 0.2, size: 1.8, width: 1.3, wobble: 0.05, rotate: 0, drive: 0.1 } },
+    mode: 'tape', speed: 1.3, eq: eqOf([2.5, -1.5, 0, 1, 3]), exciter: 0.14, glue: 0.22,
+    reverb: 0.2, size: 1.8, width: 1.3, wobble: 0.05, rotate: 0, drive: 0.1 } },
   { name: 'NIGHTCORE DOUX', tag: 'a peine presse', s: {
-    mode: 'tape', speed: 1.18, bass: 3, air: 2, reverb: 0.26, size: 2.2, width: 1.2, wobble: 0.04, rotate: 0, drive: 0.06 } },
+    mode: 'tape', speed: 1.18, eq: eqOf([3, -1, 0, 0.5, 2]), exciter: 0.1, glue: 0.18,
+    reverb: 0.26, size: 2.2, width: 1.2, wobble: 0.04, rotate: 0, drive: 0.06 } },
   { name: 'HYPER', tag: 'ca part en vrille', s: {
-    mode: 'tape', speed: 1.5, bass: 1, air: 4.5, reverb: 0.16, size: 1.4, width: 1.45, wobble: 0.1, rotate: 0, drive: 0.22 } },
+    mode: 'tape', speed: 1.5, eq: eqOf([1, -3, -1, 2, 4.5]), exciter: 0.2, glue: 0.3,
+    reverb: 0.16, size: 1.4, width: 1.45, wobble: 0.1, rotate: 0, drive: 0.22 } },
   { name: 'RALENTI + REVERB', tag: 'slowed, 0.82x', s: {
-    mode: 'tape', speed: 0.82, bass: 4.5, air: -1, reverb: 0.5, size: 3.6, width: 1.35, wobble: 0.08, rotate: 0, drive: 0.05 } },
+    mode: 'tape', speed: 0.82, eq: eqOf([4.5, -3.5, 0, 2.5, 2]), exciter: 0.3, glue: 0.25,
+    reverb: 0.5, size: 3.6, width: 1.35, wobble: 0.08, rotate: 0, drive: 0.05 } },
   { name: 'VAPORWAVE', tag: '0.72x et bande fatiguee', s: {
-    mode: 'tape', speed: 0.72, bass: 5, air: -3, reverb: 0.42, size: 4.2, width: 1.5, wobble: 0.3, rotate: 0, drive: 0.12 } },
+    mode: 'tape', speed: 0.72, eq: eqOf([5, -2, 1, 0, -3]), exciter: 0.05, glue: 0.35,
+    reverb: 0.42, size: 4.2, width: 1.5, wobble: 0.3, rotate: 0, drive: 0.12 } },
   { name: '8D', tag: 'ca tourne autour de la tete', s: {
-    mode: 'tape', speed: 1.25, bass: 3, air: 2, reverb: 0.34, size: 2.8, width: 1.6, rotate: 0.22, wobble: 0.04, drive: 0.06 } },
+    mode: 'tape', speed: 1.25, eq: eqOf([3, -2, 0, 1.5, 2.5]), exciter: 0.16, glue: 0.2,
+    reverb: 0.34, size: 2.8, width: 1.6, rotate: 0.22, wobble: 0.04, drive: 0.06 } },
   { name: 'CHIPMUNK', tag: 'aucune dignite', s: {
-    mode: 'tape', speed: 1.75, bass: 0, air: 5, reverb: 0.12, size: 1.2, width: 1.1, wobble: 0.12, rotate: 0, drive: 0.3 } },
+    mode: 'tape', speed: 1.75, eq: eqOf([0, -4, 2, 3, 5]), exciter: 0.25, glue: 0.4,
+    reverb: 0.12, size: 1.2, width: 1.1, wobble: 0.12, rotate: 0, drive: 0.3 } },
   { name: 'RAPIDE, VOIX INTACTE', tag: 'mode libre', s: {
-    mode: 'free', speed: 1.3, pitch: 0, bass: 2, air: 2, reverb: 0.18, size: 1.8, width: 1.2, wobble: 0, rotate: 0, drive: 0.06 } },
+    mode: 'free', speed: 1.3, pitch: 0, eq: eqOf([2, -1.5, 1, 1.5, 2]), exciter: 0.18, glue: 0.2,
+    reverb: 0.18, size: 1.8, width: 1.2, wobble: 0, rotate: 0, drive: 0.06 } },
+  { name: 'GRAVE COLOSSAL', tag: 'pour les caissons', s: {
+    mode: 'tape', speed: 1, eq: eqOf([8.5, -3, -1, 1, 2], [{ f: 85 }]), exciter: 0.2, glue: 0.4,
+    reverb: 0.12, size: 1.6, width: 1.15, wobble: 0.02, rotate: 0, drive: 0.14, cut: 22 } },
+  { name: 'CA RESPIRE', tag: 'contre le son etouffe', s: {
+    mode: 'tape', speed: 1, eq: eqOf([2.5, -6, -1.5, 3, 5]), exciter: 0.42, glue: 0.15,
+    reverb: 0.16, size: 2, width: 1.3, wobble: 0.02, rotate: 0, drive: 0.05 } },
 ]
 
 /* ------------------------------------------------------------------ */
@@ -83,9 +122,37 @@ export function buildNcChain(ctx: BaseAudioContext, s: NcSettings): NcChain {
   fl1.start(); fl2.start()
 
   const hp = ctx.createBiquadFilter(); hp.type = 'highpass'
-  const low = ctx.createBiquadFilter(); low.type = 'lowshelf'; low.frequency.value = 180
-  const high = ctx.createBiquadFilter(); high.type = 'highshelf'; high.frequency.value = 6500
+
+  // Egaliseur parametrique : le coeur du reglage de couleur
+  const eq = buildEq(ctx, s.eq)
+
+  // Bascule spectrale : deux plateaux opposes autour de 700 Hz. Une seule
+  // commande pour dire « plus clair » ou « plus sombre » sans toucher a l'EQ.
+  const tiltLo = ctx.createBiquadFilter(); tiltLo.type = 'lowshelf'; tiltLo.frequency.value = 700
+  const tiltHi = ctx.createBiquadFilter(); tiltHi.type = 'highshelf'; tiltHi.frequency.value = 700
+
   const shaper = ctx.createWaveShaper(); shaper.oversample = '2x'
+
+  // Exciter : un morceau ralenti n'a plus d'aigus a remonter — un plateau
+  // ne fait que grossir du silence. On en fabrique donc : on prend le haut
+  // du medium, on le sature pour creer ses harmoniques, puis on ne garde
+  // que ce qui est apparu au-dessus. L'ordre compte — filtrer d'abord tout
+  // en haut ne laisserait rien a distordre.
+  const exIn = ctx.createGain()
+  const exHp = ctx.createBiquadFilter(); exHp.type = 'highpass'; exHp.frequency.value = 1200; exHp.Q.value = 0.6
+  const exShape = ctx.createWaveShaper(); exShape.oversample = '4x'; exShape.curve = driveCurve(0.9, 0.4)
+  const exPost = ctx.createBiquadFilter(); exPost.type = 'highpass'; exPost.frequency.value = 3000; exPost.Q.value = 0.6
+  const exGain = ctx.createGain(); exGain.gain.value = 0
+
+  // Compression de cohesion : elle tient l'ensemble quand on pousse le grave
+  const glue = ctx.createDynamicsCompressor()
+  glue.knee.value = 22; glue.attack.value = 0.02; glue.release.value = 0.22
+
+  // Compensation de niveau et limiteur de sortie
+  const trim = ctx.createGain()
+  const limiter = ctx.createDynamicsCompressor()
+  limiter.threshold.value = -1.2; limiter.knee.value = 0; limiter.ratio.value = 20
+  limiter.attack.value = 0.002; limiter.release.value = 0.14
 
   // Elargisseur mi/lateral : on reconstruit L/R a partir de M et S
   const split = ctx.createChannelSplitter(2)
@@ -115,18 +182,39 @@ export function buildNcChain(ctx: BaseAudioContext, s: NcSettings): NcChain {
   const conv = ctx.createConvolver(); conv.normalize = true
   const preDelay = ctx.createDelay(0.2); preDelay.delayTime.value = 0.018
 
-  input.connect(flutter).connect(hp).connect(low).connect(high).connect(shaper).connect(split)
+  input.connect(flutter).connect(hp)
+  hp.connect(eq.input)
+  eq.output.connect(tiltLo).connect(tiltHi)
+  tiltHi.connect(exIn)
+  exIn.connect(exHp).connect(exShape).connect(exPost).connect(exGain).connect(shaper)
+  exIn.connect(shaper)
+  shaper.connect(glue).connect(split)
   const afterWidth: AudioNode = rot ? (merge.connect(rot), rot) : merge
-  afterWidth.connect(dry).connect(output)
-  afterWidth.connect(preDelay).connect(conv).connect(wet).connect(output)
+  const sum = ctx.createGain()
+  afterWidth.connect(dry).connect(sum)
+  afterWidth.connect(preDelay).connect(conv).connect(wet).connect(sum)
+  sum.connect(trim).connect(limiter).connect(output)
 
   let irKey = '', driveKey = ''
   const chain: NcChain = {
     input, output,
     update(v) {
       hp.frequency.value = clamp(v.cut, 15, 800)
-      low.gain.value = clamp(v.bass, -18, 18)
-      high.gain.value = clamp(v.air, -18, 18)
+      eq.update(v.eq)
+      const tilt = clamp(v.autoTilt ? autoTiltOf(v.speed) + v.tilt : v.tilt, -12, 12)
+      tiltLo.gain.value = -tilt
+      tiltHi.gain.value = tilt
+      exGain.gain.value = clamp(v.exciter, 0, 1) * 0.55
+      // Un seuil qui descend et un ratio qui monte : une seule commande
+      // pour « plus serre », comme sur une tranche de console.
+      const gl = clamp(v.glue, 0, 1)
+      glue.threshold.value = -6 - gl * 24
+      glue.ratio.value = 1.5 + gl * 8
+      // La compensation prend l'EQ ET la bascule en compte
+      const tiltComp = -Math.abs(tilt) * 0.18
+      trim.gain.value = v.autoGain
+        ? Math.pow(10, clamp(eqAutoGain(v.eq) + tiltComp - v.exciter * 1.6, -18, 12) / 20)
+        : 1
       const dk = v.drive.toFixed(3)
       if (dk !== driveKey) { shaper.curve = driveCurve(v.drive * 0.55); driveKey = dk }
       widthG.gain.value = clamp(v.width, 0, 2.5) * 0.5
@@ -231,10 +319,9 @@ export async function renderNc(
   const chain = buildNcChain(ctx, s)
   node.connect(chain.input)
 
-  const limiter = ctx.createDynamicsCompressor()
-  limiter.threshold.value = -1.2; limiter.knee.value = 0; limiter.ratio.value = 20
-  limiter.attack.value = 0.002; limiter.release.value = 0.14
-  chain.output.connect(limiter).connect(ctx.destination)
+  // Le limiteur vit desormais dans la chaine : le rendu et l'ecoute
+  // passent exactement par le meme traitement.
+  chain.output.connect(ctx.destination)
 
   node.start(0)
   onProgress?.(0.45)

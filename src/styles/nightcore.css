@@ -154,3 +154,70 @@
 .nc-btn.go { background: linear-gradient(180deg, #ff7cc2, #d02a86); }
 .nc-btn.cy { background: linear-gradient(180deg, #74ebff, #1591b5); color: #04222b; }
 .nc-note { font: 400 9px/1.5 Tahoma, "DejaVu Sans", Verdana, sans-serif; color: var(--nc-dim); }
+
+/* ============================================================
+   EGALISEUR
+   La courbe occupe toute la largeur : c'est l'objet principal,
+   pas une vignette a cote des potards.
+   ============================================================ */
+
+.eq-group { width: 100%; margin-bottom: 10px; }
+.eq-group > h4 { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.eq-group > h4 .nc-note { text-transform: none; letter-spacing: 0; font-weight: 400; }
+.eq-group > h4 .sel { margin: 2px 0; }
+.eq-group > h4 .nc-btn { padding: 3px 8px; font-size: 9px; }
+
+.eq-view {
+  position: relative; height: 186px; margin: 8px 10px 0;
+  border: 1px solid #090613; border-radius: 4px; overflow: hidden;
+  box-shadow: inset 0 0 26px rgba(255,92,176,.08), inset 2px 2px 7px rgba(0,0,0,.9);
+  touch-action: none;
+}
+.eq-cv { display: block; width: 100%; height: 100%; }
+/* Le verre : la courbe est derriere une vitre, pas posee sur un fond plat */
+.eq-view::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background:
+    repeating-linear-gradient(0deg, rgba(0,0,0,.16) 0 1px, transparent 1px 3px),
+    radial-gradient(120% 100% at 50% 40%, transparent 55%, rgba(0,0,0,.55) 100%);
+}
+
+.eq-bands { display: flex; gap: 4px; padding: 8px 10px 0; flex-wrap: wrap; }
+.eq-band {
+  flex: 1 1 118px; min-width: 108px;
+  padding: 4px 7px 5px;
+  border: 1px solid var(--nc-line); border-left: 3px solid var(--bc, var(--nc-pink));
+  border-radius: 3px; cursor: pointer;
+  background: linear-gradient(180deg, rgba(53,39,95,.85), rgba(26,18,53,.85));
+  box-shadow: inset 0 1px rgba(255,255,255,.08);
+}
+.eq-band:hover { filter: brightness(1.18); }
+.eq-band.hot { border-color: var(--bc); box-shadow: 0 0 0 1px var(--bc), inset 0 1px rgba(255,255,255,.12); }
+.eq-band.off { opacity: .42; filter: grayscale(.75); }
+.eq-band u {
+  display: block; text-decoration: none;
+  font: 700 8px/1.6 Tahoma, "DejaVu Sans", Verdana, sans-serif;
+  letter-spacing: 1.1px; color: var(--bc, var(--nc-dim));
+}
+.eq-band b {
+  display: block; font: 700 13px/1.25 "Courier New", monospace;
+  color: var(--nc-text); font-variant-numeric: tabular-nums;
+}
+.eq-band i {
+  display: block; font-style: normal;
+  font: 400 9px/1.4 "Courier New", monospace; color: var(--nc-dim);
+}
+
+.eq-tools { display: flex; align-items: center; gap: 8px; padding: 8px 10px 12px; flex-wrap: wrap; }
+.eq-tools .sep { width: 1px; align-self: stretch; margin: 2px 3px; background: var(--nc-line); }
+.eq-tools .nc-btn { padding: 5px 10px; font-size: 9px; }
+
+/* Un interrupteur doit dire s'il est enclenche autrement que par un
+   bouton legerement plus sombre : une diode, comme sur un rack. */
+.nc-btn.tog { gap: 7px; }
+.nc-btn.tog .led {
+  width: 7px; height: 7px; border-radius: 50%; flex: 0 0 7px;
+  background: #1d1733; box-shadow: inset 0 0 0 1px rgba(0,0,0,.7);
+}
+.nc-btn.tog.on { filter: none; background: linear-gradient(180deg, #ff7cc2, #c02a7c); color: #2a0a1c; }
+.nc-btn.tog.on .led { background: #fff2f8; box-shadow: 0 0 6px rgba(255,255,255,.95); }

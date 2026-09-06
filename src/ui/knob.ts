@@ -213,7 +213,9 @@ export function fader(o: {
   onInput: (v: number) => void; color?: string; label?: string
 }): HTMLElement {
   const H = o.height ?? 120
-  let value = clamp(o.value, o.min, o.max)
+  // min/max sont mutables : un fader de pitch change de plage (± 8, 16, 50 %)
+  let lo = o.min, hi = o.max
+  let value = clamp(o.value, lo, hi)
   const cap = h('div', { class: 'fader-cap' })
   const fill = h('div', { class: 'fader-fill' })
   const track = h('div', { class: 'fader-track' }, fill, cap)
@@ -222,18 +224,18 @@ export function fader(o: {
   if (o.color) fill.style.background = o.color
 
   const paint = () => {
-    const n = (value - o.min) / (o.max - o.min || 1)
+    const n = (value - lo) / (hi - lo || 1)
     cap.style.bottom = `${n * (H - 18)}px`
     fill.style.height = `${n * 100}%`
   }
-  const set = (v: number) => { value = clamp(v, o.min, o.max); paint(); o.onInput(value) }
+  const set = (v: number) => { value = clamp(v, lo, hi); paint(); o.onInput(value) }
 
   let start = 0
-  drag(track, (_dx, dy) => set(start - (dy / (H - 18)) * (o.max - o.min)),
+  drag(track, (_dx, dy, e) => set(start - (dy / (H - 18)) * (hi - lo) * (e.shiftKey ? 0.25 : 1)),
     () => { start = value })
   track.addEventListener('wheel', (e) => {
     e.preventDefault()
-    set(value - Math.sign(e.deltaY) * (o.max - o.min) * (e.shiftKey ? 0.01 : 0.04))
+    set(value - Math.sign(e.deltaY) * (hi - lo) * (e.shiftKey ? 0.01 : 0.04))
   }, { passive: false })
 
   const def = o.def ?? o.value
@@ -241,14 +243,24 @@ export function fader(o: {
   wrap.addEventListener('contextmenu', (e) => {
     contextMenu(e, [
       { label: 'Valeur par defaut', ico: 'loop', accel: 'double-clic', onClick: () => set(def) },
-      { label: 'Au minimum', onClick: () => set(o.min) },
-      { label: 'Au maximum', onClick: () => set(o.max) },
+      { label: 'Au minimum', onClick: () => set(lo) },
+      { label: 'Au maximum', onClick: () => set(hi) },
     ], { title: o.label ?? 'Niveau' })
   })
 
   paint()
-  ;(wrap as HTMLElement & { setValue?: (v: number) => void }).setValue = (v: number) => {
-    value = clamp(v, o.min, o.max); paint()
+  const api = wrap as HTMLElement & {
+    setValue?: (v: number) => void
+    setRange?: (span: number) => void
+  }
+  api.setValue = (v: number) => { value = clamp(v, lo, hi); paint() }
+  /** Change la plage autour de zero. La valeur ne bouge pas : seule
+      l'echelle change, sinon elargir la plage remettrait le reglage a
+      zero juste apres qu'on l'a pose. */
+  api.setRange = (span: number) => {
+    lo = -span; hi = span
+    value = clamp(value, lo, hi)
+    paint()
   }
   return wrap
 }

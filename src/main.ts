@@ -9,6 +9,7 @@ import './styles/goofy.css'
 import './styles/nightcore.css'
 import './styles/synth.css'
 import './styles/menu.css'
+import './styles/dj.css'
 
 import { h, clear } from './ui/dom'
 import { Win, type Geometry } from './ui/win'
@@ -19,6 +20,7 @@ import { Mixer } from './ui/mixer'
 import { ChannelEditor } from './ui/channel'
 import { Browser } from './ui/browser'
 import { Nightcore } from './ui/nightcore'
+import { DjMode } from './ui/dj'
 import { Transport } from './ui/transport'
 import { Viteau } from './ui/viteau'
 import { dialog, closeDialog, toast, Taskbar, Saver, desktopIcon, type MenuEntry } from './ui/shell'
@@ -50,7 +52,7 @@ const desktop = h('div', { id: 'desktop' })
 const viteau = new Viteau()
 const saver = new Saver()
 
-let rack: Rack, roll: PianoRoll, playlist: Playlist, mixer: Mixer, chEditor: ChannelEditor, browser: Browser, transport: Transport, nightcore: Nightcore
+let rack: Rack, roll: PianoRoll, playlist: Playlist, mixer: Mixer, chEditor: ChannelEditor, browser: Browser, transport: Transport, nightcore: Nightcore, dj: DjMode
 const wins = new Map<string, Win>()
 let dirty = false
 
@@ -481,6 +483,7 @@ function buildUI() {
   chEditor = new ChannelEditor(ctx)
   browser = new Browser(ctx)
   nightcore = new Nightcore(ctx)
+  dj = new DjMode(ctx)
   transport = new Transport(ctx, exportDialog, toggleLiveRec)
 
   const W = window.innerWidth, H = window.innerHeight - 100
@@ -512,8 +515,10 @@ function buildUI() {
      'Glisse un fichier audio n\'importe ou sur le bureau pour l\'importer')
   mk('nightcore', 'Nightcorification', 'moon', nightcore.el, 190, 34, 890, 630, () => nightcore.refresh(),
      'Clic sur la forme d\'onde pour se placer · glisser pour tracer une boucle · clic droit pour l\'enlever')
+  mk('dj', 'DJ Viteau', 'disk', dj.el, 120, 24, 1080, 660, () => dj.resize(),
+     'Le centre du plateau scratche, le bord recale · CUE se maintient · SYNC cale sur l\'autre platine')
 
-  for (const id of ['roll', 'mixer', 'browser', 'channel', 'nightcore']) wins.get(id)!.close()
+  for (const id of ['roll', 'mixer', 'browser', 'channel', 'nightcore', 'dj']) wins.get(id)!.close()
 
   /* --- menu Demarrer --- */
   const fileInput = h('input', { type: 'file', accept: '.vidaw,.json,application/json', style: { display: 'none' } })
@@ -526,6 +531,7 @@ function buildUI() {
 
   const entries: MenuEntry[] = [
     { icon: 'moon', label: 'Nightcorification', sub: 'accelerer un morceau', onClick: () => wins.get('nightcore')!.restore() },
+    { icon: 'disk', label: 'DJ Viteau', sub: 'deux platines et une table', onClick: () => wins.get('dj')!.restore() },
     { sep: true, icon: '', label: '' },
     { icon: 'rack', label: 'Channel Rack', sub: 'le sequenceur', onClick: () => wins.get('rack')!.restore() },
     { icon: 'piano', label: 'Piano roll', sub: 'les notes', onClick: () => wins.get('roll')!.restore() },
@@ -573,6 +579,7 @@ function buildUI() {
   /* --- icones du bureau --- */
   const shortcuts: [string, string, string][] = [
     ['moon', 'Nightcorification', 'nightcore'],
+    ['disk', 'DJ Viteau', 'dj'],
     ['rack', 'Poste de travail', 'rack'],
     ['piano', 'Piano roll', 'roll'],
     ['folder', 'Mes Samples', 'browser'],
@@ -580,7 +587,7 @@ function buildUI() {
   ]
   shortcuts.forEach(([ic, lb, target], i) => {
     const el = desktopIcon(ic, lb, 14, 10 + i * 82, () => wins.get(target)!.restore())
-    if (target === 'nightcore') el.classList.add('star')
+    if (target === 'nightcore' || target === 'dj') el.classList.add('star')
     desktop.appendChild(el)
   })
   desktop.appendChild(desktopIcon('trash', 'Corbeille', 14, 10 + shortcuts.length * 82, () => {
@@ -716,6 +723,14 @@ function showHelp() {
       ['Clic droit', 'Menu : saisir, copier, coller une valeur'],
       ['Fleches (potard selectionne)', 'Regler au clavier'],
     ]],
+    ['Mode DJ Viteau', [
+      ['Q / W', 'Lecture ou pause, platine A et B'],
+      ['A / S', 'CUE, platine A et B'],
+      ['Fleches gauche / droite', 'Deplacer le crossfader'],
+      ['Centre du plateau', 'Scratcher : freiner, pousser, revenir en arriere'],
+      ['Bord du plateau', 'Recaler sans arreter le disque'],
+      ['Clic droit sur le plateau', 'Menu de la platine'],
+    ]],
     ['Synthetiseur', [
       ['A/Q S D F G H J K', 'Jouer les touches blanches'],
       ['Z/W E T Y U', 'Jouer les touches noires'],
@@ -764,7 +779,7 @@ function showAbout() {
 const WIN_KEYS: [string, string][] = [
   ['rack', 'Channel Rack'], ['roll', 'Piano roll'], ['playlist', 'Playlist'],
   ['mixer', 'Mixeur'], ['channel', 'Instrument'], ['browser', 'Samples'],
-  ['nightcore', 'Nightcorification'],
+  ['nightcore', 'Nightcorification'], ['dj', 'DJ Viteau'],
 ]
 
 function selectNeighbour(d: number) {
@@ -791,8 +806,12 @@ function bindKeys() {
     }
     if (typing) return
 
+    // Le mode DJ a ses propres touches ; il ne les prend que si sa
+    // fenetre est ouverte et au premier plan.
+    if (!mod && !e.altKey && dj?.handleKey(e)) { e.preventDefault(); return }
+
     /* --- fenetres : Alt + chiffre --- */
-    if (e.altKey && /^[1-7]$/.test(k)) {
+    if (e.altKey && /^[1-8]$/.test(k)) {
       e.preventDefault()
       const [id] = WIN_KEYS[Number(k) - 1]
       wins.get(id)?.toggle()

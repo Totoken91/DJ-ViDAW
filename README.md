@@ -115,11 +115,13 @@ hauteur par recouvrement de grains fenêtrés ; c'est utile quand on veut
 accélérer sans effet chipmunk, mais ça grésille un peu, et c'est annoncé comme
 tel dans l'interface plutôt que caché.
 
-- **Huit presets** : nightcore (1.30x), nightcore doux, hyper, ralenti + reverb,
-  vaporwave, 8D, chipmunk, et « rapide, voix intacte » (mode libre).
+- **Dix presets** : nightcore (1.30x), nightcore doux, hyper, ralenti + reverb,
+  vaporwave, 8D, chipmunk, « rapide, voix intacte » (mode libre), grave colossal,
+  et « ça respire ».
 - **Chaîne dédiée** : pleurage de bande (deux LFO désaccordés sur un retard
-  court), coupe-bas, plateaux grave et aigu, saturation, élargisseur mi/latéral,
-  panoramique automatique « 8D », réverbe à convolution, limiteur.
+  court), coupe-bas, égaliseur paramétrique, bascule spectrale, exciter,
+  saturation, compression de cohésion, élargisseur mi/latéral, panoramique
+  automatique « 8D », réverbe à convolution, compensation de niveau, limiteur.
 - **Lecture en direct** avec forme d'onde, tête de lecture, et boucle qu'on
   trace à la souris.
 - **Affichage** de la vitesse, de la hauteur en demi-tons, de la durée
@@ -127,6 +129,83 @@ tel dans l'interface plutôt que caché.
 - **Sorties** : export audio par rendu hors-ligne (même chaîne, donc identique à
   l'écoute), ou envoi direct comme channel sampler pour le découper dans le
   séquenceur.
+
+#### L'égaliseur
+
+Cinq bandes paramétriques — deux plateaux et trois cloches — placées là où les
+problèmes vivent : le grave à 110 Hz, la boue à 260 Hz, le corps à 1,5 kHz, la
+clarté à 5 kHz, l'air à 8 kHz.
+
+**La courbe est l'interface.** On attrape un point et on le déplace :
+horizontalement la fréquence, verticalement le gain, molette pour la largeur,
+double-clic pour remettre la bande à plat, clic droit pour son menu (type,
+largeur, activation). Le spectre réel du signal est peint derrière — régler un
+EQ à l'aveugle, c'est deviner où se trouve le problème.
+
+La courbe affichée n'est pas une approximation décorative : les coefficients
+sont ceux de la spécification Web Audio, évalués analytiquement, ce qui permet
+de la tracer avant même que le son soit autorisé par le navigateur. Vérifié
+contre `getFrequencyResponse` : l'écart maximal est de **0,0000 dB**.
+
+**Contre le son étouffé**, trois outils au-delà des bandes :
+
+| Commande | Ce qu'elle fait |
+|---|---|
+| **BASCULE** | Ouvre ou assombrit tout le spectre d'un geste — deux plateaux opposés autour de 700 Hz. |
+| **AUTO** | La bascule suit la vitesse. Ralentir descend tout le spectre et étouffe ; accélérer rend criard. La correction va à contresens, à moitié — corriger à 100 % annulerait l'effet recherché. |
+| **EXCITER** | Refabrique les aigus qu'un ralenti a mangés. Un plateau ne fait que grossir du silence : ici on prend le haut du médium, on le sature pour créer ses harmoniques, et on ne garde que ce qui est apparu au-dessus de 3 kHz. Mesuré : **×14** d'énergie au-dessus de 3,5 kHz sur un signal qui n'en avait pas. |
+| **COHÉSION** | Une compression douce qui tient l'ensemble quand on pousse le grave. |
+| **NIVEAU AUTO** | Retire le volume gagné par l'égalisation, pondéré façon courbe d'égale sensation. Sans ça, « plus fort » passe toujours pour « mieux ». |
+
+Sept courbes toutes faites accompagnent le tout — plat, grave colossal,
+anti-boue, ça respire, voix devant, téléphone, club — et elles ne touchent que
+les gains : les fréquences que tu as réglées survivent au changement de preset.
+
+Le limiteur vit maintenant **dans** la chaîne, pas seulement dans le rendu :
+l'écoute et l'export passent exactement par le même traitement.
+
+### Le mode DJ Viteau
+
+Deux platines, une table, un crossfader. Icône sur le bureau, `Alt+8`.
+
+Une platine, ce n'est pas un lecteur avec un bouton lecture : c'est un disque
+qu'on touche.
+
+- **Le plateau se scratche.** La main sur le disque prend la main sur l'horloge :
+  on freine, on pousse, on part en arrière. Le bord extérieur ne sert qu'à
+  recaler d'un coup de pouce, sans faire déraper le morceau — comme sur une vraie
+  platine.
+- **Le retour en arrière est réel.** Un `AudioBufferSourceNode` ne sait pas lire
+  à vitesse négative ; le morceau est donc gardé dans les deux sens, et la
+  bascule d'un tampon à l'autre se fait avec un fondu de 4 ms pour que le
+  raccord ne s'entende pas.
+- **Détection de tempo et de premier temps** à l'ouverture : autocorrélation
+  d'une enveloppe d'attaques, additionnée aussi à la mesure (un morceau en 4/4
+  est plus régulier à la mesure qu'au temps), avec une pondération autour de
+  125 BPM qui évite l'erreur classique du facteur deux. La grille de temps est
+  dessinée sur la forme d'onde zoomée.
+- **SYNC** cale tempo **et** phase sur l'autre platine. Si le calage demande plus
+  que la plage du fader, la plage s'élargit toute seule plutôt que de mentir sur
+  la position du curseur.
+- **CUE façon platine CD** : appui = écoute depuis le repère, relâchement =
+  retour au repère, à l'arrêt. Plus quatre repères rapides par platine.
+- **Boucles** de 1, 2, 4 ou 8 temps, calées sur la grille.
+- **Effets de jeu**, qui se tiennent au lieu de se cliquer : FREIN (le moteur
+  s'arrête en glissant, la vitesse descend par paliers pour que la position
+  reste exacte), ENVERS, et roulements 1/4, 1/8, 1/16 — en relâchant, le morceau
+  repart là où il serait s'il n'avait jamais bouclé.
+- **La table** : trim, trois bandes d'EQ avec coupures franches, filtre bipolaire
+  (passe-bas à gauche, passe-haut à droite), écho calé sur le tempo de la
+  platine, vu-mètre et fader par voie, sortie master avec limiteur.
+- **Crossfader** avec trois lois de mélange : douce pour mixer, linéaire, et
+  coupe nette pour scratcher au rythme.
+- **Craquements de vinyle** en option sur les deux platines.
+- **ENREGISTRER LE MIX** capture la sortie de la table — les deux platines, EQ,
+  filtres et effets compris — et la propose en WAV.
+
+Les sources : un fichier déposé sur une platine, un sample déjà importé dans le
+projet, ou **le morceau du projet lui-même**, rendu hors-ligne et posé sur le
+disque.
 
 ### Le démarrage
 
@@ -313,7 +392,10 @@ anneau de sites — ce qu'on collait vraiment en bas d'une page en 2001.
 | `Suppr` | Efface la note survolée (piano roll) |
 | `Ctrl`+molette | Zoom (piano roll, playlist) |
 | `Ctrl + Z` / `Ctrl + Maj + Z` | Annuler / rétablir |
-| `Alt + 1` … `Alt + 7` | Ouvrir ou fermer une fenêtre |
+| `Alt + 1` … `Alt + 8` | Ouvrir ou fermer une fenêtre |
+| `Q` / `W` (mode DJ) | Lecture ou pause, platine A et B |
+| `A` / `S` (mode DJ) | CUE, platine A et B |
+| Flèches ← → (mode DJ) | Déplacer le crossfader |
 | `Tab` / `Maj + Tab` | Channel suivant / précédent |
 | `?` | La liste complète, dans l'application |
 | `Alt`+clic sur la forme d'onde | Poser une tranche |
@@ -364,6 +446,8 @@ src/
 ├─ audio/
 │  ├─ voices.ts         synthèse des percussions, sampler, synthé
 │  ├─ synth.ts          le synthétiseur : voix, filtre, LFO, effets
+│  ├─ eq.ts             égaliseur paramétrique + ses filtres en formules
+│  ├─ dj.ts             les platines, le scratch, la table, le tempo
 │  ├─ presets.ts        les 36 presets
 │  ├─ nightcore.ts      chaîne nightcore, étirement temporel, rendu
 │  ├─ fx.ts             les 9 effets, en fabriques reconstructibles
@@ -374,12 +458,14 @@ src/
 ├─ worklets/            bitcrusher et tap d'enregistrement (JS pur)
 ├─ ui/                  fenêtres, séquenceur, piano roll, playlist, mixeur…
 │  ├─ menu.ts           les menus contextuels partagés
+│  ├─ eqview.ts         la courbe d'EQ, manipulable au point
+│  ├─ dj.ts             la console DJ : plateaux, table, crossfader
 │  ├─ icons.ts          le jeu d'icônes et la mascotte, en SVG
 │  ├─ synth.ts          la face avant du synthétiseur
 │  ├─ wallpaper.ts      le paysage calculé
 │  └─ nightcore.ts      l'applet Nightcorification
 └─ styles/              xp.css (Luna) · daw.css (FL) · goofy.css (Y2K)
-                        nightcore.css · synth.css · menu.css
+                        nightcore.css · synth.css · menu.css · dj.css
 ```
 
 ---

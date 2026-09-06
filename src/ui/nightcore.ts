@@ -7,6 +7,8 @@
 import { h, clear, drag } from './dom'
 import { icon } from './icons'
 import { knob } from './knob'
+import { eqView, BAND_COLORS, type EqView } from './eqview'
+import { EQ_PRESETS, BAND_NAMES } from '../audio/eq'
 import type { Ctx } from './ctx'
 import { computePeaks, guessBpm, type StoredSample } from '../audio/samples'
 import {
@@ -35,6 +37,9 @@ export class Nightcore {
   private preset = 0
   private cells: Record<string, HTMLElement> = {}
   private playBtn: HTMLElement | null = null
+  private eq: EqView | null = null
+  private eqRows: HTMLElement[] = []
+  private analyser: AnalyserNode | null = null
   private loop: [number, number] | null = null
   private fileInput: HTMLInputElement
 
@@ -116,7 +121,19 @@ export class Nightcore {
     const actx = this.ctx.engine.ctx
     if (actx) {
       this.player = new NcPlayer(actx, buf, this.s)
-      this.player.tap = this.ctx.engine.graph?.analyser ?? null
+      // Un analyseur a nous : la courbe d'EQ montre le spectre reel de ce
+      // qui sort de la chaine, pas une devinette. On garde aussi celui du
+      // projet pour que le vu-metre de la barre du haut continue de vivre.
+      const an = actx.createAnalyser()
+      an.fftSize = 2048
+      an.smoothingTimeConstant = 0.72
+      this.analyser = an
+      const fan = actx.createGain()
+      fan.connect(an)
+      const master = this.ctx.engine.graph?.analyser
+      if (master) fan.connect(master)
+      this.player.tap = fan
+      this.eq?.setAnalyser(an)
       this.player.onEnd = () => this.paintTransport()
     }
     this.applyPreset(0)
@@ -204,10 +221,8 @@ export class Nightcore {
       ))
 
     const tone = h('div', { class: 'nc-group' },
-      h('h4', {}, 'Couleur'),
+      h('h4', {}, 'Matiere'),
       h('div', { class: 'nc-knobs' },
-        K('BASSE', -12, 12, () => this.s.bass, (v) => { this.s.bass = v }, 2.5, 1, (v) => `${v > 0 ? '+' : ''}${v.toFixed(1)}dB`),
-        K('AIR', -12, 12, () => this.s.air, (v) => { this.s.air = v }, 2, 1, (v) => `${v > 0 ? '+' : ''}${v.toFixed(1)}dB`),
         K('COUPE-BAS', 15, 400, () => this.s.cut, (v) => { this.s.cut = v }, 30, 2, (v) => `${Math.round(v)}Hz`),
         K('SATURATION', 0, 1, () => this.s.drive, (v) => { this.s.drive = v }, .08, 1, (v) => `${Math.round(v * 100)}%`),
         K('WOBBLE', 0, 1, () => this.s.wobble, (v) => { this.s.wobble = v }, .06, 1, (v) => `${Math.round(v * 100)}%`),
@@ -239,16 +254,129 @@ export class Nightcore {
       }, this.trackName),
       wave, readout, presets,
       h('div', { class: 'nc-main' }, big, h('div', { style: { display: 'flex', flexDirection: 'column', gap: '10px', flex: '1 1 320px' } }, space, tone)),
+      this.eqPanel(),
       actions,
     )
 
     requestAnimationFrame(() => { this.paintWave(); this.paintReadout(); this.paintTransport() })
   }
 
+  /* ---------------- egaliseur ---------------- */
+
+  /** Le panneau d'egalisation. C'est ici qu'on va chercher le grave et
+      qu'on empeche le morceau de s'etouffer quand on le ralentit. */
+  private eqPanel(): HTMLElement {
+    const view = eqView({
+      bands: this.s.eq,
+      onChange: () => { this.push(); this.paintEqRows() },
+      onActive: (i) => this.highlightBand(i),
+      height: 186,
+    })
+    this.eq = view
+    view.setAnalyser(this.analyser)
+
+    /* --- une ligne de valeurs par bande --- */
+    this.eqRows = this.s.eq.map((b, i) => {
+      const row = h('div', {
+        class: 'eq-band',
+        style: { '--bc': BAND_COLORS[i] },
+        dataset: { tip: `${BAND_NAMES[i]} — clic pour couper la bande, clic droit pour son menu` },
+        onclick: () => { b.on = !b.on; this.push(); this.paintEqRows(); view.draw() },
+      },
+        h('u', {}, `${i + 1} ${BAND_NAMES[i]}`),
+        h('b', { class: 'g' }, '—'),
+        h('i', { class: 'f' }, '—'),
+      )
+      return row
+    })
+
+    const presetSel = h('select', { class: 'sel', onchange: (e: Event) => {
+      const el = e.target as HTMLSelectElement
+      const p = EQ_PRESETS[el.selectedIndex - 1]
+      el.selectedIndex = 0
+      if (!p) return
+      p.bands.forEach((g, i) => { if (this.s.eq[i]) { this.s.eq[i].g = g; this.s.eq[i].on = true } })
+      this.push(); this.paintEqRows(); view.draw()
+      this.ctx.toast(`EQ : ${p.name}`)
+    } },
+      h('option', {}, 'COURBES TOUTES FAITES...'),
+      ...EQ_PRESETS.map((p) => h('option', {}, `${p.name} — ${p.tag}`)),
+    )
+
+    const flat = h('button', {
+      class: 'nc-btn', dataset: { tip: 'Remet les cinq bandes a plat' },
+      onclick: () => {
+        for (const b of this.s.eq) { b.g = 0; b.on = true }
+        this.push(); this.paintEqRows(); view.draw()
+      },
+    }, icon('broom', 12), 'A PLAT')
+
+    const toggle = (label: string, tip: string, get: () => boolean, set: (v: boolean) => void) => {
+      const b = h('button', {
+        class: `nc-btn tog${get() ? ' on' : ''}`, dataset: { tip },
+        onclick: () => { set(!get()); b.classList.toggle('on', get()); this.push() },
+      }, h('i', { class: 'led' }), label)
+      return b
+    }
+
+    const K = (label: string, min: number, max: number, get: () => number,
+               set: (v: number) => void, def: number, fmt?: (v: number) => string) =>
+      knob({
+        min, max, value: get(), def, label, size: 44, color: '#ff5cb0', format: fmt,
+        onInput: (v) => { set(v); this.push() },
+      })
+
+    const panel = h('div', { class: 'nc-group eq-group' },
+      h('h4', {}, 'Egaliseur',
+        h('span', { class: 'nc-note' }, 'attrape un point et deplace-le · molette = largeur · double-clic = a plat'),
+        h('div', { class: 'spacer' }), presetSel, flat),
+      view.el,
+      h('div', { class: 'eq-bands' }, ...this.eqRows),
+      h('div', { class: 'eq-tools' },
+        K('BASCULE', -8, 8, () => this.s.tilt, (v) => { this.s.tilt = v }, 0,
+          (v) => `${v > 0 ? '+' : ''}${v.toFixed(1)}dB`),
+        toggle('AUTO', 'Compense automatiquement l\'assombrissement du a la vitesse : ralentir etouffe, accelerer rend criard',
+          () => this.s.autoTilt, (v) => { this.s.autoTilt = v }),
+        h('div', { class: 'sep' }),
+        K('EXCITER', 0, 1, () => this.s.exciter, (v) => { this.s.exciter = v }, .12,
+          (v) => `${Math.round(v * 100)}%`),
+        K('COHESION', 0, 1, () => this.s.glue, (v) => { this.s.glue = v }, .2,
+          (v) => `${Math.round(v * 100)}%`),
+        h('div', { class: 'sep' }),
+        toggle('NIVEAU AUTO', 'Retire le volume gagne par l\'egalisation : sans ca, « plus fort » passe toujours pour « mieux »',
+          () => this.s.autoGain, (v) => { this.s.autoGain = v }),
+        h('span', { class: 'nc-note', style: { maxWidth: '190px' } },
+          'BASCULE ouvre ou assombrit tout le spectre d\'un geste. EXCITER refabrique les aigus qu\'un ralenti a manges.'),
+      ),
+    )
+    requestAnimationFrame(() => { view.draw(); this.paintEqRows() })
+    return panel
+  }
+
+  /** Met a jour les valeurs affichees sous la courbe. */
+  private paintEqRows() {
+    this.s.eq.forEach((b, i) => {
+      const row = this.eqRows[i]
+      if (!row) return
+      row.classList.toggle('off', !b.on)
+      const g = row.querySelector('.g') as HTMLElement
+      const f = row.querySelector('.f') as HTMLElement
+      g.textContent = `${b.g > 0 ? '+' : ''}${b.g.toFixed(1)} dB`
+      f.textContent = b.f >= 1000 ? `${(b.f / 1000).toFixed(2)} kHz · Q ${b.q.toFixed(1)}`
+        : `${Math.round(b.f)} Hz · Q ${b.q.toFixed(1)}`
+    })
+  }
+
+  private highlightBand(i: number) {
+    this.eqRows.forEach((r, k) => r.classList.toggle('hot', k === i))
+  }
+
   private applyPreset(i: number) {
     const p = NC_PRESETS[clamp(i, 0, NC_PRESETS.length - 1)]
     this.preset = i
-    this.s = { ...defaultNc(), ...p.s }
+    // Copie profonde des bandes : sans ca, regler l'EQ modifierait le
+    // preset lui-meme, et il ne reviendrait jamais a son etat d'origine.
+    this.s = { ...defaultNc(), ...p.s, eq: (p.s.eq ?? defaultNc().eq).map((b) => ({ ...b })) }
     this.push()
   }
 
@@ -300,7 +428,7 @@ export class Nightcore {
       const p = this.player.position
       this.cells.pos.textContent = `${fmtTime(p * this.player.duration)} / ${fmtTime(this.player.duration)}`
     }
-    if (this.player.playing) this.paintWave()
+    if (this.player.playing) { this.paintWave(); this.eq?.draw() }
   }
 
   dispose() { cancelAnimationFrame(this.raf); this.player?.dispose() }
